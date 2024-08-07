@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:motion_toast/motion_toast.dart';
 import 'package:skilltest/services/baseurl.dart';
@@ -18,12 +19,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   late double _cost;
   late double _profit;
   bool _isLoading = false;
-
+  late String _userId;
   //late String _csrfToken; // Variable to hold the CSRF token
 
   @override
   void initState() {
     super.initState();
+    fetchData();
     // Call a function to obtain the CSRF token when the screen initializes
     //obtainCsrfToken();
   }
@@ -44,6 +46,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   //     print('Error obtaining CSRF token: $error');
   //   }
   // }
+  Future<void> fetchData() async {
+    final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    String? userId = await secureStorage.read(key: 'id');
+    setState(() {
+      _userId = userId ?? '';
+    });
+    print(userId);
+  }
 
   void _saveDataToApi() async {
     if (_formKey.currentState!.validate()) {
@@ -58,6 +68,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       //   'X-CSRF-Token': _csrfToken, // Include CSRF token in the headers
       // };
       final body = jsonEncode({
+        'cust_id': _userId,
         'title': _name,
         'sales': _sales,
         'cost': _cost,
@@ -70,7 +81,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         print(headers);
         print(response.body);
         print(response.statusCode);
-        if (response.statusCode == 200) {
+        if (response.statusCode == 200 || response.statusCode == 201) {
           print('Data saved successfully.');
           MotionToast.success(
             //title: Text("Delete Successfully"),

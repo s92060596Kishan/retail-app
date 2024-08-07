@@ -1,11 +1,11 @@
 // import 'dart:convert';
-//php artisan serve --host=192.168.169.1 --port=8000
+//php artisan serve --host=192.168.231.1 --port=8000
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:skilltest/models/user_model.dart';
 import 'package:skilltest/screens/detail_screen.dart';
 import 'package:skilltest/services/baseurl.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -18,7 +18,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  User? loggedInUser;
   late double totalSales = 0;
   late double profit = 0;
   late double cost = 0;
@@ -31,44 +30,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchData() async {
-    var response = await http.get(
-      Uri.parse(baseURL + 'get'),
-      headers: headers,
-    );
-    print(response.statusCode);
-    print(response.body);
+    final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    String? userId = await secureStorage.read(key: 'id');
+    print(userId);
+    try {
+      var response = await http.get(
+        Uri.parse(baseURL + 'get/${userId}'),
+        headers: headers,
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as List<dynamic>;
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-      double totalSales = 0;
-      double profit = 0;
-      double cost = 0;
+      if (response.statusCode == 200) {
+        if (response.headers['content-type']?.contains('application/json') ??
+            false) {
+          final data = jsonDecode(response.body) as List<dynamic>;
 
-      List<Map<String, dynamic>> dataList = [];
+          double totalSales = 0;
+          double profit = 0;
+          double cost = 0;
 
-      data.forEach((item) {
-        totalSales += item['sales'];
-        profit += item['profit'];
-        cost += item['cost'];
+          List<Map<String, dynamic>> dataList = [];
 
-        dataList.add({
-          'title': item['title'],
-          'sales': item['sales'],
-          'cost': item['cost'],
-          'profit': item['profit'],
-          'created_at': item['created_at'], // Include created_at in dataList
-        });
-      });
+          data.forEach((item) {
+            totalSales += double.tryParse(item['sales']) ?? 0;
+            profit += double.tryParse(item['profit']) ?? 0;
+            cost += double.tryParse(item['cost']) ?? 0;
 
-      setState(() {
-        this.totalSales = totalSales;
-        this.profit = profit;
-        this.cost = cost;
-        this.dataList = dataList;
-      });
-    } else {
-      throw Exception('Failed to load data');
+            dataList.add({
+              'title': item['title'],
+              'sales': double.tryParse(item['sales']) ?? 0,
+              'cost': double.tryParse(item['cost']) ?? 0,
+              'profit': double.tryParse(item['profit']) ?? 0,
+              'created_at': item['timestamp'],
+            });
+          });
+
+          setState(() {
+            this.totalSales = totalSales;
+            this.profit = profit;
+            this.cost = cost;
+            this.dataList = dataList;
+          });
+        } else {
+          throw Exception('Invalid content type');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      print('Error: $e');
+      // Handle error appropriately in your app, e.g., show a snackbar or dialog
     }
   }
 
@@ -356,7 +369,7 @@ class DataTableWidget extends StatelessWidget {
       rows: filteredData.map((item) {
         return DataRow(cells: [
           DataCell(Text(item['title'])),
-          DataCell(Text('${item['value']}')),
+          DataCell(Text('${item['value'].toStringAsFixed(2)}')),
           DataCell(Text(item['date'] ??
               '')), // Display formatted date or empty string if null
         ]);

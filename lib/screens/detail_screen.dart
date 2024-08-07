@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:skilltest/screens/addrecord.dart';
 import 'package:skilltest/screens/home_screen.dart';
 
 class DetailsScreen extends StatefulWidget {
@@ -36,7 +35,6 @@ class _DetailsScreenState extends State<DetailsScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.blueGrey,
-       
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -82,6 +80,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                   fontSize: 14,
                                 ),
                                 margin: 10,
+                                reservedSize: 100, // Increase if needed
                                 getTitles: (value) {
                                   int index = value.toInt();
                                   if (index >= 0 &&
@@ -100,6 +99,8 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                     return '';
                                   }
                                 },
+                                // Rotate the titles
+                                rotateAngle: 90,
                               ),
                               leftTitles: SideTitles(
                                 showTitles: true,
@@ -111,7 +112,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
                                 margin: 10,
                                 reservedSize: 50,
                                 getTitles: (value) {
-                                  return value.toString();
+                                  // If the value is found in the filtered data, return it, otherwise return an empty string
+                                  return widget.filteredData
+                                          .any((item) => item['value'] == value)
+                                      ? value.toString()
+                                      : '';
                                 },
                               ),
                             ),

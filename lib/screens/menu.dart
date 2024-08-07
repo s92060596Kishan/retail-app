@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/models/user_model.dart';
 import 'package:skilltest/screens/addrecord.dart';
 import 'package:skilltest/screens/editdata.dart';
 import 'package:skilltest/screens/settingScreen.dart';
+import 'package:skilltest/services/baseurl.dart'; // Add your base URL import
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({Key? key}) : super(key: key);
@@ -16,26 +20,63 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   User? user1;
-  void _loadUserDetails() async {
+
+  Future<void> _loadUserDetails() async {
     final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
     try {
+      // Read token and userId from secure storage
       String? userId = await secureStorage.read(key: 'id');
-      String? name = await secureStorage.read(key: 'name');
-      String? phone = await secureStorage.read(key: 'phone');
-      String? email = await secureStorage.read(key: 'email');
-      String? password = await secureStorage.read(key: 'password');
       print(userId);
-
       if (userId != null) {
-        setState(() {
-          user1 = User(
-              id: int.parse(userId),
-              userName: name,
-              phoneNumber: phone,
-              password: password,
-              email: email);
-        });
+        final response = await http.get(
+          Uri.parse(baseURL + 'getuser/$userId'), // Adjust URL based on route
+          headers: headers,
+        );
+
+        if (response.statusCode == 200) {
+          // Parse the response body to get user data
+          final Map<String, dynamic> responseData = json.decode(response.body);
+          final userMap = responseData['user'] as Map<String, dynamic>;
+
+          // Parse the user ID, ensuring it is an integer
+          final userId = int.tryParse(userMap['user_id'].toString());
+
+          if (userId != null) {
+            final updatedUser = User(
+              id: userId,
+              userName: userMap['name'] as String?,
+              email: userMap['email'] as String?,
+              phoneNumber: userMap['phone'] as String?,
+              password: userMap['password'] as String?, // Handle this securely
+            );
+
+            setState(() {
+              user1 = updatedUser;
+            });
+
+            // Update secure storage with the fetched user data
+            await secureStorage.write(key: 'id', value: userId.toString());
+            await secureStorage.write(
+                key: 'name', value: updatedUser.userName ?? '');
+            await secureStorage.write(
+                key: 'phone', value: updatedUser.phoneNumber ?? '');
+            await secureStorage.write(
+                key: 'email', value: updatedUser.email ?? '');
+            await secureStorage.write(
+                key: 'password',
+                value:
+                    updatedUser.password ?? ''); // Update the token if needed
+          } else {
+            print('Failed to parse user ID.');
+          }
+        } else {
+          // Handle error response
+          print(
+              'Failed to load user details. Status code: ${response.statusCode}');
+        }
+      } else {
+        print('Token or userId not found in secure storage.');
       }
     } catch (error) {
       // Handle error
@@ -43,7 +84,6 @@ class _MenuScreenState extends State<MenuScreen> {
     }
   }
 
-//   // Function to handle logout
   Future<void> _logout(BuildContext context) async {
     // Show confirmation dialog
     bool confirmLogout = await showDialog(
@@ -61,7 +101,7 @@ class _MenuScreenState extends State<MenuScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(true); // Cancel logout
+                Navigator.of(context).pop(true); // Confirm logout
               },
               child: Text('Yes'),
             ),
@@ -70,13 +110,14 @@ class _MenuScreenState extends State<MenuScreen> {
       },
     );
 
-    // If user confirms logout, navigate back to login screen
     if (confirmLogout == true) {
-      // For now, let's just navigate back to the login screen
       SharedPreferences preferences = await SharedPreferences.getInstance();
-      // Clear login state and user data
       await preferences.remove('isLoggedIn');
       await preferences.remove('userData');
+
+      final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+      await secureStorage.deleteAll(); // Optionally clear all secure storage
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -92,25 +133,17 @@ class _MenuScreenState extends State<MenuScreen> {
     _loadUserDetails();
   }
 
+  void _updateUserData(User updatedUser) {
+    setState(() {
+      user1 = updatedUser;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    //print(user);
     return Scaffold(
       appBar: AppBar(
         title: Text('Profile Screen'),
-        // leading: IconButton(
-        //   icon: Icon(Icons.arrow_back),
-        //   onPressed: () {
-        //     Navigator.pushReplacement(
-        //       context,
-        //       MaterialPageRoute(
-        //         builder: (context) => HomeScreen(
-        //           loggedInUser: user,
-        //         ), // Navigate to the home screen
-        //       ),
-        //     );
-        //   },
-        // ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -145,29 +178,25 @@ class _MenuScreenState extends State<MenuScreen> {
             ),
             SizedBox(height: 40),
             ListTile(
-              leading: Icon(Icons.add), // Set the icon for adding records
-              title: Text('Add Records'), // Set the text for the new option
+              leading: Icon(Icons.add),
+              title: Text('Add Records'),
               onTap: () {
-                // Navigate to screen where records can be added
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AddRecordScreen(), // Replace with your screen
+                    builder: (context) => AddRecordScreen(),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: Icon(Icons.edit), // Set the icon for adding records
-              title: Text('Edit Records'), // Set the text for the new option
+              leading: Icon(Icons.edit),
+              title: Text('Edit Records'),
               onTap: () {
-                // Navigate to screen where records can be added
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        EditRecordScreen(), // Replace with your screen
+                    builder: (context) => EditRecordScreen(),
                   ),
                 );
               },
@@ -176,12 +205,12 @@ class _MenuScreenState extends State<MenuScreen> {
               leading: Icon(Icons.settings),
               title: Text('Settings'),
               onTap: () {
-                // Navigate to settings screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        SettingsScreen(), // Navigate to the home screen
+                    builder: (context) => SettingsScreen(
+                      onUpdateUserData: _updateUserData,
+                    ),
                   ),
                 );
               },
@@ -190,14 +219,13 @@ class _MenuScreenState extends State<MenuScreen> {
               leading: Icon(Icons.notifications),
               title: Text('Notifications'),
               onTap: () {
-                // Navigate to notifications screen
+                // Handle navigation to notifications screen
               },
             ),
             ListTile(
               leading: Icon(Icons.logout),
               title: Text('Logout'),
               onTap: () {
-                // Handle logout action
                 _logout(context);
               },
             ),

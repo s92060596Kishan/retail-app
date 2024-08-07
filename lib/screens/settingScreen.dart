@@ -8,6 +8,9 @@ import 'package:skilltest/models/user_model.dart';
 import 'package:skilltest/services/baseurl.dart';
 
 class SettingsScreen extends StatefulWidget {
+  final Function(User) onUpdateUserData;
+
+  SettingsScreen({required this.onUpdateUserData});
   @override
   _SettingsScreenState createState() => _SettingsScreenState();
 }
@@ -79,19 +82,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _updateUserData() async {
     // // Prepare the updated user data
-    // User upddatedUser = User(
-    //   id: user1?.id,
-    //   userName: _userNameController.text,
-    //   email: _emailController.text,
-    //   phoneNumber: _phoneNumberController.text,
-    //   password: _passwordController.text,
-    // );
+    User updatedUser = User(
+      id: user1?.id,
+      userName: _userNameController.text,
+      email: _emailController.text,
+      phoneNumber: _phoneNumberController.text,
+      password: _passwordController.text,
+    );
     print(user1?.id);
     // Make API request to update user data
     final response = await http.put(
-      Uri.parse(baseURL +
-          'updateprofile/${user1?.id}'),
-           // Replace with your API endpoint
+      Uri.parse(baseURL + 'updateprofile/${user1?.id}'),
+      // Replace with your API endpoint
       body: json.encode({
         'name': _userNameController.text,
         'email': _emailController.text,
@@ -110,6 +112,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         position: MotionToastPosition.top,
         animationType: AnimationType.fromTop,
       ).show(context);
+      widget.onUpdateUserData(updatedUser);
+      final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+      await secureStorage.write(key: 'name', value: _userNameController.text);
+      await secureStorage.write(key: 'email', value: _emailController.text);
+      await secureStorage.write(
+          key: 'phone', value: _phoneNumberController.text);
+      await secureStorage.write(
+          key: 'password', value: _passwordController.text);
     } else {
       // If the server returns an error response, show error message
       MotionToast.error(

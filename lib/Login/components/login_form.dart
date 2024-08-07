@@ -73,20 +73,30 @@ class _LoginFormState extends State<LoginForm> {
       if (response.statusCode == 200) {
         final Map<String, dynamic>? responseData = jsonDecode(response.body);
         final dynamic userData = responseData?['user'];
+        final dynamic userId = responseData?['user']?['user_id'];
+
+        if (userId == null) {
+          // User ID is null, cannot log in
+          MotionToast.warning(
+            description: Text("Please wait for admin verification"),
+            position: MotionToastPosition.top,
+            animationType: AnimationType.fromTop,
+          ).show(context);
+          return; // Exit the method without navigating
+        }
+
         await secureStorage.write(
-            key: 'id', value: responseData?['user']?['id']?.toString() ?? '');
+          key: 'id',
+          value: userId.toString(),
+        );
         await secureStorage.write(
-            key: 'name',
-            value: responseData?['user']?['name']);
+            key: 'name', value: responseData?['user']?['name']);
         await secureStorage.write(
-            key: 'phone',
-            value: responseData?['user']?['phone']);
+            key: 'phone', value: responseData?['user']?['phone']);
         await secureStorage.write(
-            key: 'email',
-            value: responseData?['user']?['email']);
+            key: 'email', value: responseData?['user']?['email']);
         await secureStorage.write(
-            key: 'password',
-            value: responseData?['user']?['password']);
+            key: 'password', value: responseData?['user']?['password']);
         if (userData != null) {
           User user = User.fromJson(userData);
 
@@ -95,15 +105,13 @@ class _LoginFormState extends State<LoginForm> {
           _preferences.setString(
               'userData', jsonEncode(userData)); // Save user data
           MotionToast.success(
-            //title: Text("Delete Successfully"),
-            description: Text("Login Sucessfully"),
+            description: Text("Login Successfully"),
             position: MotionToastPosition.top,
             animationType: AnimationType.fromTop,
           ).show(context);
           _navigateToHome(user);
         } else {
           MotionToast.error(
-            //title: Text("Delete Successfully"),
             description: Text("User data not found"),
             position: MotionToastPosition.top,
             animationType: AnimationType.fromTop,
@@ -111,7 +119,6 @@ class _LoginFormState extends State<LoginForm> {
         }
       } else {
         MotionToast.warning(
-          //title: Text("Delete Successfully"),
           description: Text("Incorrect Email or Password"),
           position: MotionToastPosition.top,
           animationType: AnimationType.fromTop,
@@ -120,7 +127,6 @@ class _LoginFormState extends State<LoginForm> {
     } catch (e) {
       print('Error: $e');
       MotionToast.error(
-        //title: Text("Delete Successfully"),
         description: Text("Server Error Try again later"),
         position: MotionToastPosition.top,
         animationType: AnimationType.fromTop,
