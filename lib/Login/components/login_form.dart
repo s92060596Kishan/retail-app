@@ -5,8 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:motion_toast/motion_toast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:skilltest/models/navigationBar.dart';
 import 'package:skilltest/models/user_model.dart';
+import 'package:skilltest/screens/shopNavigation.dart';
 import 'package:skilltest/services/baseurl.dart';
 
 import '../../../components/already_have_an_account_acheck.dart';
@@ -61,7 +61,7 @@ class _LoginFormState extends State<LoginForm> {
 
     try {
       final response = await http.post(
-        Uri.parse(baseURL + 'login'),
+        Uri.parse(baseURL + 'mobile/login'),
         headers: headers,
         body: jsonEncode(<String, String>{
           'email': email,
@@ -73,22 +73,14 @@ class _LoginFormState extends State<LoginForm> {
       if (response.statusCode == 200) {
         final Map<String, dynamic>? responseData = jsonDecode(response.body);
         final dynamic userData = responseData?['user'];
-        final dynamic userId = responseData?['user']?['user_id'];
+        final dynamic shopData = responseData?['shop'];
 
-        if (userId == null) {
-          // User ID is null, cannot log in
-          MotionToast.warning(
-            description: Text("Please wait for admin verification"),
-            position: MotionToastPosition.top,
-            animationType: AnimationType.fromTop,
-          ).show(context);
-          return; // Exit the method without navigating
-        }
-
+        // await secureStorage.write(
+        //   key: 'id',
+        //   value: userId.toString(),
+        // );
         await secureStorage.write(
-          key: 'id',
-          value: userId.toString(),
-        );
+            key: 'user_id', value: responseData?['user']?['id'].toString());
         await secureStorage.write(
             key: 'name', value: responseData?['user']?['name']);
         await secureStorage.write(
@@ -109,7 +101,13 @@ class _LoginFormState extends State<LoginForm> {
             position: MotionToastPosition.top,
             animationType: AnimationType.fromTop,
           ).show(context);
-          _navigateToHome(user);
+          // Navigate to ShopDetailsScreen with shop data
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ShopDetailsScreen(),
+            ),
+          );
         } else {
           MotionToast.error(
             description: Text("User data not found"),
@@ -138,7 +136,7 @@ class _LoginFormState extends State<LoginForm> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => MyNavigationBar(loggedInUser: user),
+        builder: (context) => ShopDetailsScreen(),
       ),
     );
   }

@@ -5,8 +5,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
-import 'package:skilltest/screens/detail_screen.dart';
+import 'package:skilltest/screens/category.dart';
+import 'package:skilltest/screens/categorypaymentType.dart';
+import 'package:skilltest/screens/shopNavigation.dart';
 import 'package:skilltest/services/baseurl.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -22,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late double profit = 0;
   late double cost = 0;
   late List<Map<String, dynamic>> dataList = [];
+  Map<String, double> transactionTypeTotals =
+      {}; // To store totals for each type
 
   @override
   void initState() {
@@ -35,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     print(userId);
     try {
       var response = await http.get(
-        Uri.parse(baseURL + 'get/${userId}'),
+        Uri.parse(baseURL + 'getsales/${userId}'),
         headers: headers,
       );
 
@@ -46,32 +49,44 @@ class _HomeScreenState extends State<HomeScreen> {
         if (response.headers['content-type']?.contains('application/json') ??
             false) {
           final data = jsonDecode(response.body) as List<dynamic>;
-
-          double totalSales = 0;
-          double profit = 0;
-          double cost = 0;
+          int totalSalesCount = 0;
+          double totalProfit = 0;
 
           List<Map<String, dynamic>> dataList = [];
+          Map<String, double> tempTypeTotals =
+              {}; // To store totals for each type
 
           data.forEach((item) {
-            totalSales += double.tryParse(item['sales']) ?? 0;
-            profit += double.tryParse(item['profit']) ?? 0;
-            cost += double.tryParse(item['cost']) ?? 0;
+            totalSalesCount += 1; // Increment sales count for each entity
+            totalProfit += double.tryParse(item['total_payable']) ?? 0;
+
+            String type = item['type'] ?? 'Unknown';
+
+            // Calculate the total payable for each transaction type
+            tempTypeTotals[type] = (tempTypeTotals[type] ?? 0) +
+                (double.tryParse(item['total_payable']) ?? 0);
 
             dataList.add({
-              'title': item['title'],
-              'sales': double.tryParse(item['sales']) ?? 0,
-              'cost': double.tryParse(item['cost']) ?? 0,
-              'profit': double.tryParse(item['profit']) ?? 0,
-              'created_at': item['timestamp'],
+              'title': 'Transaction ${item['transactionId'] ?? ''}',
+              'total_payable': double.tryParse(item['total_payable']) ?? 0,
+              'cus_paid_amount': double.tryParse(item['cus_paid_amount']) ?? 0,
+              'cus_balance': double.tryParse(item['cus_balance']) ?? 0,
+              'transaction_date': item['transaction_date'] ?? '',
+              'type': type,
+              'method1': item['method1'] ?? '',
+              'method2': item['method2'],
+              'user_id': item['user_id'],
+              'item_count': item['item_count'],
+              'transactionId': item['transactionId'] ?? '',
             });
           });
 
           setState(() {
-            this.totalSales = totalSales;
-            this.profit = profit;
-            this.cost = cost;
+            this.totalSales = totalSalesCount.toDouble();
+            this.profit = totalProfit;
             this.dataList = dataList;
+            this.transactionTypeTotals =
+                tempTypeTotals; // Update the state with transaction type totals
           });
         } else {
           throw Exception('Invalid content type');
@@ -89,176 +104,160 @@ class _HomeScreenState extends State<HomeScreen> {
     await fetchData();
   }
 
-  void showDetailModel(BuildContext context, String dataType) {
-    String? columnTitle;
-    List<Map<String, dynamic>> filteredData = [];
-
-    switch (dataType) {
-      case 'sales':
-        columnTitle = 'Sales';
-        filteredData = dataList.map((item) {
-          return {
-            'title': item['title'],
-            'value': item['sales'],
-            'date': formatDate(item['created_at'])
-          };
-        }).toList();
-        break;
-      case 'cost':
-        columnTitle = 'Cost';
-        filteredData = dataList.map((item) {
-          return {
-            'title': item['title'],
-            'value': item['cost'],
-            'date': formatDate(item['created_at'])
-          };
-        }).toList();
-        break;
-      case 'profit':
-        columnTitle = 'Profit';
-        filteredData = dataList.map((item) {
-          return {
-            'title': item['title'],
-            'value': item['profit'],
-            'date': formatDate(item['created_at'])
-          };
-        }).toList();
-        break;
-      default:
-        break;
-    }
-
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => DetailsScreen(
-        filteredData: filteredData,
-        columnTitle: columnTitle!,
-      ),
-    ));
-  }
-
-  String formatDate(String? dateString) {
-    if (dateString != null && dateString.isNotEmpty) {
-      try {
-        DateTime dateTime = DateTime.parse(dateString);
-        return DateFormat('yyyy-MM-dd').format(dateTime);
-      } catch (e) {
-        print('Error parsing date: $e');
-        return 'Unknown';
-      }
-    } else {
-      return 'Unknown';
-    }
-  }
-
-  void navigateToWebView(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WebViewScreen(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 132, 177, 255),
-        title: Text('Main Screen'),
-        actions: [
-          IconButton(
+        appBar: AppBar(
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.teal, Colors.blueAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          title: Text(
+            'Posvega-Retails',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          leading: IconButton(
+            // Add a back icon button
             icon: Icon(
-              Icons.account_circle,
+              Icons.arrow_back, // Use an arrow back icon
               color: Colors.black,
             ),
             onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //       builder: (context) =>
-              //           MenuScreen(user:loggedInUser)),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ShopDetailsScreen(), // Navigate to ShopDetails
+                ),
+              );
             },
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: refreshData,
-        child: ListView(
-          padding: EdgeInsets.all(20),
-          children: [
-            AnimatedTileCard(
-              title: 'Total Sales',
-              icon: Icons.attach_money,
-              gradient: LinearGradient(
-                colors: [Colors.green, Colors.lightGreen],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.account_circle,
+                color: Colors.black,
               ),
-              onTap: () {
-                showDetailModel(context, 'sales');
+              onPressed: () {
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //       builder: (context) =>
+                //           MenuScreen(user:loggedInUser)),
+                // );
               },
-              amount: '\$${totalSales.toStringAsFixed(2)}',
-            ),
-            SizedBox(height: 20),
-            AnimatedTileCard(
-              title: 'Profit',
-              icon: Icons.trending_up,
-              gradient: LinearGradient(
-                colors: [Colors.orange, Colors.deepOrange],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              onTap: () {
-                showDetailModel(context, 'profit');
-              },
-              amount: '\$${profit.toStringAsFixed(2)}',
-            ),
-            SizedBox(height: 20),
-            AnimatedTileCard(
-              title: 'Cost',
-              icon: Icons.money_off,
-              gradient: LinearGradient(
-                colors: [Colors.red, Colors.deepPurple],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              onTap: () {
-                showDetailModel(context, 'cost');
-              },
-              amount: '\$${cost.toStringAsFixed(2)}',
-            ),
-            SizedBox(height: 20),
-            GestureDetector(
-              onTap: () {
-                navigateToWebView(context);
-              },
-              child: Hero(
-                tag: 'visitWebPage',
-                child: Container(
-                  margin: EdgeInsets.symmetric(vertical: 10),
-                  padding: EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Visit Webpage',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),
-      ),
-    );
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: RefreshIndicator(
+            onRefresh: refreshData,
+            child: ListView(
+              padding: EdgeInsets.all(20),
+              children: [
+                AnimatedTileCard(
+                  title: 'Total Sales',
+                  icon: Icons.receipt,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color.fromARGB(255, 247, 149, 69),
+                      Color(0xFF0033CC)
+                    ], // Cyan green to deep blue
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CategoriesPage()),
+                    );
+                  },
+                  trailing: Icon(Icons.arrow_forward_ios,
+                      color: Colors.white, size: 30), // Add trailing icon
+                  amount:
+                      '${totalSales.toInt()} Sales', // Show total sales as transaction count
+                ),
+                SizedBox(height: 20),
+                AnimatedTileCard(
+                  title: 'Total Sales Amount',
+                  icon: Icons.attach_money,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF50C878),
+                      Color(0xFF008080)
+                    ], // Mint green to teal blue
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+
+                  onTap: () {
+                    // showDetailModel(context, 'profit');
+                  },
+                  amount:
+                      '\$${profit.toStringAsFixed(2)}', // Show profit as the sum of total_payable
+                ),
+                SizedBox(height: 20),
+
+                // Dynamically generate tiles for each transaction type
+                ...transactionTypeTotals.keys.map((type) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: AnimatedTileCard(
+                      title: '$type Transactions',
+                      icon: Icons.monetization_on,
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF1E88E5),
+                          Color(0xFF0D47A1)
+                        ], // Royal blue shades
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+
+                      onTap: () {
+                        // Filter the transactions for this type
+                        final filteredTransactions = dataList
+                            .where((transaction) => transaction['type'] == type)
+                            .toList();
+                        // Navigate to the transaction details page
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CategoriesTypePage(
+                              transactionType: type,
+                              transactions: filteredTransactions,
+                            ),
+                          ),
+                        );
+                      },
+                      amount:
+                          '\$${transactionTypeTotals[type]?.toStringAsFixed(2) ?? '0.00'}',
+                      trailing: Icon(Icons.arrow_forward_ios,
+                          color: Colors.white, size: 30), // Add trailing icon
+                    ),
+                  );
+                }).toList(),
+                SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ));
   }
 }
 
@@ -268,6 +267,7 @@ class AnimatedTileCard extends StatefulWidget {
   final Gradient gradient;
   final VoidCallback onTap;
   final String amount;
+  final Widget? trailing;
 
   const AnimatedTileCard({
     required this.title,
@@ -275,6 +275,7 @@ class AnimatedTileCard extends StatefulWidget {
     required this.gradient,
     required this.onTap,
     required this.amount,
+    this.trailing,
   });
 
   @override
@@ -341,6 +342,13 @@ class _AnimatedTileCardState extends State<AnimatedTileCard> {
                   ),
                 ],
               ),
+              if (widget.trailing != null)
+                Padding(
+                  padding: const EdgeInsets.only(
+                      left:
+                          18.0), // Adjust this padding to move the trailing widget right
+                  child: widget.trailing!,
+                ),
             ],
           ),
         ),

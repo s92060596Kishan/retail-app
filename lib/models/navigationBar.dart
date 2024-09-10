@@ -1,54 +1,70 @@
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:bottom_navy_bar/bottom_navy_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:skilltest/models/user_model.dart';
-import 'package:skilltest/screens/editdata.dart';
+import 'package:skilltest/screens/filterTransaction.dart';
 import 'package:skilltest/screens/home_screen.dart';
+import 'package:skilltest/screens/livesalescate.dart';
 import 'package:skilltest/screens/menu.dart';
 
 class MyNavigationBar extends StatefulWidget {
-  final User loggedInUser;
-
-  const MyNavigationBar({Key? key, required this.loggedInUser})
-      : super(key: key);
-
   @override
   _MyNavigationBarState createState() => _MyNavigationBarState();
 }
 
 class _MyNavigationBarState extends State<MyNavigationBar> {
-  int _selectedIndex = 0;
+  int _currentIndex = 0;
+  late PageController _pageController; // Use 'late'
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(); // Initialize in initState
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = widget.loggedInUser; // Access loggedInUser here
-    final List<Widget> _widgetOptions = <Widget>[
-      HomeScreen(), // Pass user as a parameter when creating HomeScreen
-      EditRecordScreen(),
-      MenuScreen(), // Pass user here
-    ];
-
     return Scaffold(
-      body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: CurvedNavigationBar(
-        index: _selectedIndex,
-        height: 50.0,
-        items: <Widget>[
-          Icon(Icons.home, size: 30),
-          Icon(Icons.data_usage, size: 30),
-          Icon(Icons.person, size: 30),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() => _currentIndex = index);
+        },
+        children: <Widget>[
+          HomeScreen(),
+          livesalesCategoriesPage(),
+          DateRangeLogScreen(),
+          MenuScreen(),
         ],
-        color: Color.fromARGB(255, 193, 193, 193),
-        buttonBackgroundColor: Colors.blue,
-        backgroundColor: Colors.transparent,
-        animationCurve: Curves.easeInOut,
-        animationDuration: Duration(milliseconds: 600),
-        onTap: _onItemTapped,
+      ),
+      bottomNavigationBar: BottomNavyBar(
+        selectedIndex: _currentIndex,
+        onItemSelected: (index) {
+          setState(() => _currentIndex = index);
+          _pageController.jumpToPage(index);
+        },
+        items: <BottomNavyBarItem>[
+          BottomNavyBarItem(
+              title: Text('Home'),
+              icon: Icon(Icons.home),
+              activeColor: Color(0xFF005959)),
+          BottomNavyBarItem(
+              title: Text('Sales'),
+              icon: Icon(Icons.attach_money),
+              activeColor: Color(0xFF005959)),
+          BottomNavyBarItem(
+              title: Text('Quick'),
+              icon: Icon(Icons.assessment),
+              activeColor: Color(0xFF005959)),
+          BottomNavyBarItem(
+              title: Text('Profile'),
+              icon: Icon(Icons.person),
+              activeColor: Color(0xFF005959)),
+        ],
       ),
     );
   }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/constants.dart';
+import 'package:skilltest/services/baseurl.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await fetchApiKey(); // Ensure API key is fetched before running the app
   runApp(const MyApp());
 }
 
@@ -14,7 +17,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
+      title: 'PV-Retail',
       theme: ThemeData(
         primaryColor: kPrimaryColor,
         scaffoldBackgroundColor: Colors.white,

@@ -6,10 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/models/user_model.dart';
-import 'package:skilltest/screens/addrecord.dart';
-import 'package:skilltest/screens/editdata.dart';
-import 'package:skilltest/screens/settingScreen.dart';
-import 'package:skilltest/services/baseurl.dart'; // Add your base URL import
+import 'package:skilltest/services/baseurl.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({Key? key}) : super(key: key);
@@ -25,22 +22,17 @@ class _MenuScreenState extends State<MenuScreen> {
     final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
     try {
-      // Read token and userId from secure storage
       String? userId = await secureStorage.read(key: 'id');
-      print(userId);
       if (userId != null) {
         final response = await http.get(
-          Uri.parse(baseURL + 'getuser/$userId'), // Adjust URL based on route
+          Uri.parse(baseURL + 'getmobileuser/$userId'),
           headers: headers,
         );
 
         if (response.statusCode == 200) {
-          // Parse the response body to get user data
           final Map<String, dynamic> responseData = json.decode(response.body);
-          final userMap = responseData['user'] as Map<String, dynamic>;
-
-          // Parse the user ID, ensuring it is an integer
-          final userId = int.tryParse(userMap['user_id'].toString());
+          final userMap = responseData as Map<String, dynamic>;
+          final userId = int.tryParse(userMap['cust_id'].toString());
 
           if (userId != null) {
             final updatedUser = User(
@@ -48,14 +40,13 @@ class _MenuScreenState extends State<MenuScreen> {
               userName: userMap['name'] as String?,
               email: userMap['email'] as String?,
               phoneNumber: userMap['phone'] as String?,
-              password: userMap['password'] as String?, // Handle this securely
+              password: userMap['password'] as String?,
             );
 
             setState(() {
               user1 = updatedUser;
             });
 
-            // Update secure storage with the fetched user data
             await secureStorage.write(key: 'id', value: userId.toString());
             await secureStorage.write(
                 key: 'name', value: updatedUser.userName ?? '');
@@ -64,14 +55,11 @@ class _MenuScreenState extends State<MenuScreen> {
             await secureStorage.write(
                 key: 'email', value: updatedUser.email ?? '');
             await secureStorage.write(
-                key: 'password',
-                value:
-                    updatedUser.password ?? ''); // Update the token if needed
+                key: 'password', value: updatedUser.password ?? '');
           } else {
             print('Failed to parse user ID.');
           }
         } else {
-          // Handle error response
           print(
               'Failed to load user details. Status code: ${response.statusCode}');
         }
@@ -79,13 +67,11 @@ class _MenuScreenState extends State<MenuScreen> {
         print('Token or userId not found in secure storage.');
       }
     } catch (error) {
-      // Handle error
       print('Error loading user details: $error');
     }
   }
 
   Future<void> _logout(BuildContext context) async {
-    // Show confirmation dialog
     bool confirmLogout = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -95,13 +81,13 @@ class _MenuScreenState extends State<MenuScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(false); // Confirm logout
+                Navigator.of(context).pop(false);
               },
               child: Text('No'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(true); // Confirm logout
+                Navigator.of(context).pop(true);
               },
               child: Text('Yes'),
             ),
@@ -116,12 +102,12 @@ class _MenuScreenState extends State<MenuScreen> {
       await preferences.remove('userData');
 
       final FlutterSecureStorage secureStorage = FlutterSecureStorage();
-      await secureStorage.deleteAll(); // Optionally clear all secure storage
+      await secureStorage.deleteAll();
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => LoginScreen(), // Replace with your login screen
+          builder: (context) => LoginScreen(),
         ),
       );
     }
@@ -143,94 +129,128 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile Screen'),
+        title: Text('Profile Screen', style: TextStyle(fontSize: 22)),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.teal, Colors.blueAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
-      body: Padding(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 50,
-              child: Image.asset("assets/images/guest.jpg"),
+            Center(
+              child: CircleAvatar(
+                radius: 50,
+                backgroundImage: AssetImage("assets/images/guest.jpg"),
+                backgroundColor: Colors.white,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.teal, width: 2),
+                  ),
+                ),
+              ),
             ),
             SizedBox(height: 20),
-            Text(
-              '${user1?.userName ?? 'Guest'}',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            Center(
+              child: Text(
+                '${user1?.userName ?? 'Guest'}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
-            Text(
-              'Email: ${user1?.email ?? 'N/A'}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+            SizedBox(height: 10),
+            Center(
+              child: Text(
+                'Email: ${user1?.email ?? 'N/A'}',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[200],
+                ),
               ),
             ),
-            Text(
-              'Phone Number: ${user1?.phoneNumber ?? 'N/A'}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+            Center(
+              child: Text(
+                'Phone Number: ${user1?.phoneNumber ?? 'N/A'}',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[300],
+                ),
               ),
             ),
             SizedBox(height: 40),
-            ListTile(
-              leading: Icon(Icons.add),
-              title: Text('Add Records'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddRecordScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.edit),
-              title: Text('Edit Records'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditRecordScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      onUpdateUserData: _updateUserData,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Notifications'),
-              onTap: () {
-                // Handle navigation to notifications screen
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
-              onTap: () {
-                _logout(context);
-              },
+            Expanded(
+              child: ListView(
+                children: [
+                  // _buildMenuItem(Icons.receipt_long, 'All Transactions', () {
+                  //   Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) => QuickTransactionListPage(),
+                  //     ),
+                  //   );
+                  // }),
+                  // _buildMenuItem(Icons.point_of_sale_sharp, 'Active Sales', () {
+                  //   Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) => TransactionListPage(),
+                  //     ),
+                  //   );
+                  // }),
+                  _buildMenuItem(Icons.settings, 'Profile Settings', () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (context) => DateRangeLogScreen(),
+                    //   ),
+                    // );
+                  }),
+                  _buildMenuItem(Icons.logout, 'Logout', () {
+                    _logout(context);
+                  }),
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
+    return Card(
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blueAccent, size: 28),
+        title: Text(
+          title,
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        ),
+        trailing:
+            Icon(Icons.arrow_forward_ios, color: Colors.blueAccent, size: 20),
+        onTap: onTap,
       ),
     );
   }
