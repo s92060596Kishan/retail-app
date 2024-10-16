@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:skilltest/constants.dart';
 import 'package:skilltest/responsive.dart';
+
 import '../../components/background.dart';
 import 'components/login_form.dart';
 import 'components/login_screen_top_image.dart';
-import 'package:skilltest/constants.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);

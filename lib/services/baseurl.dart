@@ -1,20 +1,21 @@
 import 'dart:convert';
+
 //flutter build apk --release
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const String baseURL =
-    "http://posvega-apis.com/testapp/api/"; 
-    // emulator localhost
-//const String baseURL = "http://192.168.231.1:8000/api/";
+const String baseURL = "http://posvega-apis.com/Retail-Cloud/api/";
+// emulator localhost
+//const String baseURL = "http://192.168.242.1:8000/api/";
 String? apiKey;
-
+const String CrmURL = "http://posvega-apis.com/pv-CRM/api/";
+//const String CrmURL = "http://192.168.242.1:4000/api/";
 // Function to fetch the API key and set it
 Future<void> fetchApiKey() async {
   try {
-    final response = await http
-        .get(Uri.parse('http://posvega-apis.com/reactnew/api/getkey'));
+    final response =
+        await http.get(Uri.parse('http://posvega-apis.com/pv-CRM/api/getkey'));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

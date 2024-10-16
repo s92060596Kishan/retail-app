@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class DepartmentDetailsPayTypePage extends StatefulWidget {
   final List<Map<String, dynamic>> transactions;
@@ -95,18 +96,15 @@ class _DepartmentDetailsPageState extends State<DepartmentDetailsPayTypePage> {
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Department Details'),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: Text(
+          'Department Details',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: Colors.teal,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -177,7 +175,7 @@ class _DepartmentDetailsPageState extends State<DepartmentDetailsPayTypePage> {
                                           style: TextStyle(
                                               fontWeight: FontWeight.w500)),
                                       Text(
-                                          'Amount: \$${double.tryParse(item['amount'].toString())?.toStringAsFixed(2) ?? '0.00'}',
+                                          'Amount: \ $currencySymbol ${double.tryParse(item['amount'].toString())?.toStringAsFixed(2) ?? '0.00'}',
                                           style: TextStyle(
                                               fontWeight: FontWeight.w500)),
                                     ],

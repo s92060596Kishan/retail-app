@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/models/user_model.dart';
+import 'package:skilltest/screens/settingScreen.dart';
 import 'package:skilltest/services/baseurl.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -103,7 +104,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
       final FlutterSecureStorage secureStorage = FlutterSecureStorage();
       await secureStorage.deleteAll();
-
+      await secureStorage.delete(key: 'selectedProducts');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -129,16 +130,12 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile Screen', style: TextStyle(fontSize: 22)),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: Text(
+          'Profile Screen',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: Colors.teal,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -216,12 +213,12 @@ class _MenuScreenState extends State<MenuScreen> {
                   //   );
                   // }),
                   _buildMenuItem(Icons.settings, 'Profile Settings', () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) => DateRangeLogScreen(),
-                    //   ),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileManagementScreen(),
+                      ),
+                    );
                   }),
                   _buildMenuItem(Icons.logout, 'Logout', () {
                     _logout(context);

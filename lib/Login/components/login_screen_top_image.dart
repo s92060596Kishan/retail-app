@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../constants.dart';
 
 class LoginScreenTopImage extends StatelessWidget {
@@ -11,8 +12,8 @@ class LoginScreenTopImage extends StatelessWidget {
     return Column(
       children: [
         const Text(
-          "LOGIN",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          "PV-Retails LOGIN",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         const SizedBox(height: defaultPadding * 2),
         Row(
@@ -20,7 +21,7 @@ class LoginScreenTopImage extends StatelessWidget {
             const Spacer(),
             Expanded(
               flex: 8,
-              child: Image.asset("assets/images/login.png"),
+              child: Image.asset("assets/images/vegalogo1.png"),
             ),
             const Spacer(),
           ],

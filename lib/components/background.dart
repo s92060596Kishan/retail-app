@@ -7,7 +7,8 @@ class Background extends StatelessWidget {
     required this.child,
     this.topImage = "assets/images/main_top.png",
     this.bottomImage = "assets/images/login_bottom.png",
-    this.backgroundImage = "assets/images/background.jpg", // Add background image path
+    this.backgroundImage =
+        "assets/images/acvb.jpg", // Add background image path
   }) : super(key: key);
 
   final String topImage, bottomImage, backgroundImage;
@@ -15,16 +16,17 @@ class Background extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset:
+          true, // Allows form to resize when keyboard is open
       body: Container(
         width: double.infinity,
         height: MediaQuery.of(context).size.height,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(backgroundImage), // Set the background image
-            fit: BoxFit.cover, // You can adjust the fit as needed
-          ),
-        ),
+        decoration: BoxDecoration(color: Colors.white
+            // image: DecorationImage(
+            //   image: AssetImage(backgroundImage), // Set the background image
+            //   fit: BoxFit.cover, // You can adjust the fit as needed
+            // ),
+            ),
         child: Stack(
           alignment: Alignment.center,
           children: <Widget>[

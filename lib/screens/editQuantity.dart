@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class EditQuantityPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -86,18 +87,15 @@ class _EditQuantityPageState extends State<EditQuantityPage> {
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Quantity'),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: Text(
+          'Edit Quantity',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: Colors.teal,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -130,11 +128,11 @@ class _EditQuantityPageState extends State<EditQuantityPage> {
                       ),
                       Divider(),
                       Text(
-                        'Price: \$${widget.item['price'].toStringAsFixed(2)}',
+                        'Price: \ $currencySymbol ${widget.item['price'].toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                       ),
                       Text(
-                        'VAT: \$${widget.item['vat'].toStringAsFixed(2)}',
+                        'VAT: \ ${widget.item['vat'].toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                       ),
                       Text(
@@ -203,7 +201,7 @@ class _EditQuantityPageState extends State<EditQuantityPage> {
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        '\$${_newAmount.toStringAsFixed(2)}',
+                        '\ $currencySymbol ${_newAmount.toStringAsFixed(2)}',
                         style: TextStyle(
                             fontSize: 18,
                             color: Colors.teal,

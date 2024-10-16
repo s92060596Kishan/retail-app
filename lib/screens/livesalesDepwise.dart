@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class DepartmentDetailslivesalesPage extends StatefulWidget {
   @override
@@ -46,12 +47,13 @@ class _DepartmentDetailslivesalesPageState
       if (response.statusCode == 200 &&
           response.headers['content-type']?.contains('application/json') ==
               true) {
-        final List<dynamic> logs = jsonDecode(response.body);
-        print('Logs: $logs'); // Debug print
-        if (logs.isNotEmpty) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final List<dynamic> activeLogs = data['active_logs'];
+
+        if (activeLogs.isNotEmpty) {
           List<String> userIds = [];
-          for (var log in logs) {
-            userIds.add(log['Userid']);
+          for (var log in activeLogs) {
+            userIds.add(log['LogId'].toString());
           }
 
           for (String userId in userIds) {
@@ -187,18 +189,15 @@ class _DepartmentDetailslivesalesPageState
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Department Details'),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: Text(
+          'Department Details',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: Colors.teal,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -271,7 +270,7 @@ class _DepartmentDetailslivesalesPageState
                                             style: TextStyle(
                                                 fontWeight: FontWeight.w500)),
                                         Text(
-                                            'Amount: \$${double.tryParse(item['amount'].toString())?.toStringAsFixed(2) ?? '0.00'}',
+                                            'Amount: \ $currencySymbol ${double.tryParse(item['amount'].toString())?.toStringAsFixed(2) ?? '0.00'}',
                                             style: TextStyle(
                                                 fontWeight: FontWeight.w500)),
                                       ],

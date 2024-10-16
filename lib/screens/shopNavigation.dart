@@ -47,16 +47,12 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Select Your Shop'),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal, Colors.blueAccent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+          title: const Text(
+            'Select Your Shop',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
         body: Container(
           decoration: BoxDecoration(
@@ -145,11 +141,11 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                       ),
                       onTap: () async {
                         // Optional: Handle tap event if needed
-                         // Save selected shop cust_id to secure storage
-                          await secureStorage.write(
-                            key: 'id',
-                            value: shop['cust_id'].toString(),
-                          );
+                        // Save selected shop cust_id to secure storage
+                        await secureStorage.write(
+                          key: 'id',
+                          value: shop['cust_id'].toString(),
+                        );
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(

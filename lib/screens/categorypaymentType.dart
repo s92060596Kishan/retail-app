@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:skilltest/screens/TransacationTypewise.dart';
-import 'package:skilltest/screens/alltransactionitems.dart';
 import 'package:skilltest/screens/depPaymentType.dart';
 
 class CategoriesTypePage extends StatelessWidget {
@@ -17,20 +16,20 @@ class CategoriesTypePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        // flexibleSpace: Container(
+        //   decoration: BoxDecoration(
+        //     gradient: LinearGradient(
+        //       colors: [Colors.teal, Colors.blueAccent],
+        //       begin: Alignment.topLeft,
+        //       end: Alignment.bottomRight,
+        //     ),
+        //   ),
+        // ),
+        backgroundColor: Colors.teal,
         title: Text(
           'Categories',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
       ),
@@ -57,8 +56,7 @@ class CategoriesTypePage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                         builder: (context) => DepartmentDetailsPayTypePage(
-                          transactions:transactions
-                        )),
+                            transactions: transactions)),
                   );
                 },
               ),
@@ -68,8 +66,8 @@ class CategoriesTypePage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) => DepartmentDetailsPayTypePage(
-                        transactions: transactions,
-                      )),
+                            transactions: transactions,
+                          )),
                 );
               },
             ),

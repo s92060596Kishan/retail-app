@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class TransactionTypewisePage extends StatelessWidget {
   final String transactionType;
@@ -12,18 +13,15 @@ class TransactionTypewisePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
         appBar: AppBar(
-          title: Text('$transactionType Transactions'),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal, Colors.blueAccent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+          title: Text(
+            '$transactionType Transactions',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
         body: Container(
           decoration: BoxDecoration(
@@ -60,7 +58,7 @@ class TransactionTypewisePage extends StatelessWidget {
                         ),
                         Spacer(),
                         Text(
-                          'Total Payable: \$${transaction['total_payable'].toStringAsFixed(2)}',
+                          'Total Payable: \ $currencySymbol ${transaction['total_payable'].toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.blueAccent,
@@ -75,13 +73,13 @@ class TransactionTypewisePage extends StatelessWidget {
                         Row(
                           children: [
                             Text(
-                              'Paid Amount: \$${transaction['cus_paid_amount'].toStringAsFixed(2)}',
+                              'Paid Amount: \ $currencySymbol ${transaction['cus_paid_amount'].toStringAsFixed(2)}',
                               style: TextStyle(
                                   color: const Color.fromARGB(255, 5, 5, 5)),
                             ),
                             Spacer(),
                             Text(
-                              'Balance: \$${transaction['cus_balance'].toStringAsFixed(2)}',
+                              'Balance: \ $currencySymbol ${transaction['cus_balance'].toStringAsFixed(2)}',
                               style: TextStyle(
                                   color: const Color.fromARGB(255, 9, 9, 9)),
                             ),

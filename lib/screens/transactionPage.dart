@@ -5,7 +5,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/screens/transaction_activeitems.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
+//import 'package:skilltest/services/currencyget.dart';
+//log details status ==1
 class TransactionListPage extends StatefulWidget {
   const TransactionListPage({Key? key}) : super(key: key);
 
@@ -21,6 +24,7 @@ class _TransactionListPageState extends State<TransactionListPage> {
   @override
   void initState() {
     super.initState();
+    //CurrencyService().fetchCurrencyValue();
     fetchLog();
   }
 
@@ -46,20 +50,19 @@ class _TransactionListPageState extends State<TransactionListPage> {
       if (response.statusCode == 200) {
         if (response.headers['content-type']?.contains('application/json') ??
             false) {
-          final List<dynamic> logs = jsonDecode(response.body);
-          print(logs);
-          if (logs.isNotEmpty) {
-            List<String> userIds = [];
+          final Map<String, dynamic> data = jsonDecode(response.body);
+          final List<dynamic> activeLogs = data['active_logs'];
+          if (activeLogs.isNotEmpty) {
+            // Convert lists to Sets to remove duplicates
+            Set<String> userIds =
+                activeLogs.map((log) => log['LogId'].toString()).toSet();
 
-            // Collect all User IDs from the logs
-            for (var log in logs) {
-              userIds.add(log['Userid']);
-            }
+            // Convert sets back to lists (if necessary) and debug print unique values
+            print('Unique User IDs: $userIds');
 
-            // Now fetch transactions for each User ID one by one
-            for (String userId in userIds) {
-              await fetchTransactionsForUser(userId);
-            }
+            await Future.wait([
+              ...userIds.map((userId) => fetchTransactionsForUser(userId)),
+            ]);
           } else {
             setState(() {
               errorMessage = 'No logs found';
@@ -103,7 +106,16 @@ class _TransactionListPageState extends State<TransactionListPage> {
             false) {
           final List<dynamic> transactions = jsonDecode(response.body);
 
-          // Update UI with transactions for this User ID
+          // Sort transactions based on type (Cash, Card, Others - meaning anything else)
+
+          const priority = {
+            'Cash': 0,
+            'Card': 1,
+          };
+
+          // Debug print to verify sorting
+          print(transactions.map((e) => e['type']).toList());
+          // Update UI with sorted transactions for this User ID
           setState(() {
             dataList.addAll(transactions
                 .map((item) => {
@@ -122,6 +134,14 @@ class _TransactionListPageState extends State<TransactionListPage> {
                       'transaction_id': item['transactionId'] ?? '',
                     })
                 .toList());
+
+            // Now, sort the transactions by 'transaction_date' in descending order (latest first)
+            dataList.sort((a, b) {
+              DateTime dateA = DateTime.parse(a['transaction_date']);
+              DateTime dateB = DateTime.parse(b['transaction_date']);
+              return dateB
+                  .compareTo(dateA); // Reverse comparison for latest first
+            });
             isLoading = false; // Mark loading as false after first fetch
           });
         } else {
@@ -147,18 +167,15 @@ class _TransactionListPageState extends State<TransactionListPage> {
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Live sales Transactions'),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: Text(
+          'Live sales Transactions',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: Colors.teal,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -207,7 +224,7 @@ class _TransactionListPageState extends State<TransactionListPage> {
                                       ),
                                       Spacer(),
                                       Text(
-                                        'Total Payable: \$${transaction['total_payable'].toStringAsFixed(2)}',
+                                        'Total Payable: \ $currencySymbol ${transaction['total_payable'].toStringAsFixed(2)}',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.blueAccent,
@@ -223,14 +240,14 @@ class _TransactionListPageState extends State<TransactionListPage> {
                                       Row(
                                         children: [
                                           Text(
-                                            'Paid Amount: \$${transaction['cus_paid_amount'].toStringAsFixed(2)}',
+                                            'Paid Amount: \ $currencySymbol ${transaction['cus_paid_amount'].toStringAsFixed(2)}',
                                             style: TextStyle(
                                                 color: const Color.fromARGB(
                                                     255, 5, 5, 5)),
                                           ),
                                           Spacer(),
                                           Text(
-                                            'Balance: \$${transaction['cus_balance'].toStringAsFixed(2)}',
+                                            'Balance: \ $currencySymbol ${transaction['cus_balance'].toStringAsFixed(2)}',
                                             style: TextStyle(
                                                 color: const Color.fromARGB(
                                                     255, 9, 9, 9)),

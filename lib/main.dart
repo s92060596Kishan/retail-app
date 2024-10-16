@@ -6,6 +6,7 @@ import 'package:skilltest/services/baseurl.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await fetchApiKey(); // Ensure API key is fetched before running the app
+  //await CurrencyService().fetchCurrencyValue();
   runApp(const MyApp());
 }
 

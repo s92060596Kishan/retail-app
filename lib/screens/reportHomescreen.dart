@@ -5,20 +5,23 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:skilltest/screens/livesalescate.dart';
+import 'package:skilltest/screens/filterdataTransactio.dart';
 import 'package:skilltest/screens/posrecordstiles.dart';
-import 'package:skilltest/screens/shopNavigation.dart';
 import 'package:skilltest/services/baseurl.dart';
 import 'package:skilltest/services/currencyget.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class ReportHomeScreen extends StatefulWidget {
+  final String filterValue;
+  Map<String, String> dateRangeToUserId = {};
+
+  ReportHomeScreen(
+      {required this.filterValue, required this.dateRangeToUserId});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _ReportHomeScreenState createState() => _ReportHomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _ReportHomeScreenState extends State<ReportHomeScreen> {
   late double totalSales = 0;
   late double profit = 0;
   late double cost = 0;
@@ -33,71 +36,43 @@ class _HomeScreenState extends State<HomeScreen> {
       {}; // To store transactions by type
   bool isLoading = true;
   String errorMessage = '';
-
+  final FlutterSecureStorage secureStorage = FlutterSecureStorage();
   @override
   void initState() {
     super.initState();
-    fetchLog();
+    fetchTransactions(widget.filterValue);
   }
 
-  Future<void> fetchLog() async {
-    final FlutterSecureStorage secureStorage = FlutterSecureStorage();
-    String? custId = await secureStorage.read(key: 'id');
+  Future<void> fetchTransactions(String userId) async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+      dataList.clear();
+    });
 
+    String? custId = await secureStorage.read(key: 'id');
     if (custId == null) {
       setState(() {
-        isLoading = false;
         errorMessage = 'Customer ID not found.';
+        isLoading = false;
       });
       return;
     }
 
-    try {
-      final response = await http.get(
-        Uri.parse(baseURL + 'getLogs/$custId'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        print('Fetched Logs: $data'); // Debugging print
-        // Extract the two lists: active_logs and inactive_logs
-        final List<dynamic> activeLogs = data['active_logs'];
-        final List<dynamic> inactiveLogs = data['inactive_logs'];
-        if (activeLogs.isNotEmpty || inactiveLogs.isNotEmpty) {
-          // Convert lists to Sets to remove duplicates
-          Set<String> userIds =
-              activeLogs.map((log) => log['Userid'].toString()).toSet();
-          Set<String> logIds =
-              activeLogs.map((log) => log['LogId'].toString()).toSet();
-          Set<String> logIds1 =
-              inactiveLogs.map((log) => log['LogId'].toString()).toSet();
-          // Convert sets back to lists (if necessary) and debug print unique values
-          print('Unique User IDs: $userIds');
-          print('Unique Log IDs: $logIds');
-
-          await Future.wait([
-            ...logIds.map((userId) => fetchTransactionsForUser(userId)),
-            ...logIds.map((logId) => fetchPOSRecords(logId)),
-          ]);
-        } else {
-          setState(() {
-            errorMessage = 'No logs found';
-          });
-        }
-      } else {
-        throw Exception(
-            'Failed to load logs. Status Code: ${response.statusCode}');
+    // Fetch transactions based on user ID
+    if (userId == 'All') {
+      for (String id in widget.dateRangeToUserId.values.toSet()) {
+        await fetchTransactionsForUser(id);
+        await fetchPOSRecords(id);
       }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Error: $e';
-      });
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+    } else {
+      await fetchTransactionsForUser(userId);
+      await fetchPOSRecords(userId);
     }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 
   Future<void> fetchPOSRecords(String logId) async {
@@ -257,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Update state with the calculated sums
             setState(() {
-              // Ensure that totals and counts for all transaction types are initialized properly
               for (var type in ['Cash', 'Card', 'PartPay']) {
                 transactionTypeTotals[type] = transactionTypeTotals[type] ?? 0;
                 transactionTypeCounts[type] = transactionTypeCounts[type] ?? 0;
@@ -295,12 +269,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> refreshData() async {
     dataList.clear();
     dataList1.clear();
-    await fetchLog();
+    await fetchTransactions(widget.filterValue);
   }
 
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
+
     // Define the order of transaction types
     final List<String> orderedTransactionTypes = ['Cash', 'Card', 'PartPay'];
 
@@ -317,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ...orderedTransactionTypes,
       ...otherTransactionTypes
     ];
+
     return Scaffold(
       appBar: AppBar(
         // flexibleSpace: Container(
@@ -329,49 +305,11 @@ class _HomeScreenState extends State<HomeScreen> {
         //   ),
         // ),
         backgroundColor: Color.fromARGB(255, 0, 173, 156),
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/vega.png', // Path to your logo image in the assets folder
-              height: 30,
-              width: 30, // Adjust the size according to your needs
-            ),
-            SizedBox(
-                width: 10), // Add some spacing between the logo and the text
-            Text(
-              'Posvega-Retails',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-          ],
+        title: Text(
+          'Reports Menu',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Colors.black,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ShopDetailsScreen(),
-              ),
-            );
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.account_circle,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              // Navigate to user account screen
-            },
-          ),
-        ],
       ),
       body: isLoading
           ? Container(
@@ -405,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     // Show total sales
                     AnimatedTileCard(
-                      title: 'Active Sales',
+                      title: 'Total Sales',
                       icon: Icons.receipt,
                       count: '${dataList.length} Sales',
                       amount:
@@ -428,7 +366,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => livesalesCategoriesPage()),
+                              builder: (context) => FilterDetailsPage(
+                                  filterValue: widget.filterValue,
+                                  dateRangeToUserId: widget.dateRangeToUserId)),
                         );
                       },
                     ),

@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/screens/editQuantity.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class TransactionActiveDetailPage extends StatefulWidget {
   final int transactionId;
@@ -106,18 +107,15 @@ class _TransactionDetailPageState extends State<TransactionActiveDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    String? currencySymbol = CurrencyService().currencySymbol;
     return Scaffold(
         appBar: AppBar(
-          title: Text('Transaction Details'),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal, Colors.blueAccent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+          title: Text(
+            'Transaction Details',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
         body: Container(
           decoration: BoxDecoration(
@@ -184,7 +182,7 @@ class _TransactionDetailPageState extends State<TransactionActiveDetailPage> {
                                             children: [
                                               SizedBox(height: 5),
                                               Text(
-                                                  'Product Price: \$${item['price'].toStringAsFixed(2)}',
+                                                  'Product Price: \ $currencySymbol ${item['price'].toStringAsFixed(2)}',
                                                   style: TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold)),
@@ -197,55 +195,55 @@ class _TransactionDetailPageState extends State<TransactionActiveDetailPage> {
                                                             FontWeight.w500)),
                                                 Spacer(),
                                                 Text(
-                                                    'Total Amount: \$${item['amount'].toStringAsFixed(2)}',
+                                                    'Total Amount: \ $currencySymbol ${item['amount'].toStringAsFixed(2)}',
                                                     style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.w500)),
                                               ]),
                                               SizedBox(height: 5),
                                               Text(
-                                                  'VAT: \$${item['vat'].toStringAsFixed(2)}'),
+                                                  'VAT: \ ${item['vat'].toStringAsFixed(2)}'),
                                               SizedBox(height: 5),
                                               Row(children: [
                                                 Text('Promo: ${item['promo']}'),
                                                 Spacer(),
                                                 Text(
-                                                    'Promo Value: \$${item['promo_val'].toStringAsFixed(2)}'),
+                                                    'Promo Value: \ ${item['promo_val'].toStringAsFixed(2)}'),
                                               ]),
                                               SizedBox(height: 16),
-                                              Center(
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize
-                                                      .min, // Ensures Row only takes up needed space
-                                                  children: [
-                                                    IconButton(
-                                                      icon: Icon(
-                                                        Icons.edit,
-                                                        color: const Color
-                                                            .fromARGB(
-                                                            255,
-                                                            16,
-                                                            16,
-                                                            16), // Explicitly set icon color
-                                                      ),
-                                                      onPressed: () {
-                                                        _navigateToEditPage(
-                                                            item);
-                                                      },
-                                                    ),
-                                                    Text(
-                                                      'Edit Quantity',
-                                                      style: TextStyle(
-                                                        color: Colors
-                                                            .black, // Set text color
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
+                                              // Center(
+                                              //   child: Row(
+                                              //     mainAxisSize: MainAxisSize
+                                              //         .min, // Ensures Row only takes up needed space
+                                              //     children: [
+                                              //       IconButton(
+                                              //         icon: Icon(
+                                              //           Icons.edit,
+                                              //           color: const Color
+                                              //               .fromARGB(
+                                              //               255,
+                                              //               16,
+                                              //               16,
+                                              //               16), // Explicitly set icon color
+                                              //         ),
+                                              //         onPressed: () {
+                                              //           _navigateToEditPage(
+                                              //               item);
+                                              //         },
+                                              //       ),
+                                              //       Text(
+                                              //         'Edit Quantity',
+                                              //         style: TextStyle(
+                                              //           color: Colors
+                                              //               .black, // Set text color
+                                              //           fontSize: 14,
+                                              //           fontWeight:
+                                              //               FontWeight.w500,
+                                              //         ),
+                                              //       ),
+                                              //     ],
+                                              //   ),
+                                              // ),
                                             ],
                                           ),
                                         ),

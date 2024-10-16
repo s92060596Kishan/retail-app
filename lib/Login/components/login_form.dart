@@ -9,9 +9,7 @@ import 'package:skilltest/models/user_model.dart';
 import 'package:skilltest/screens/shopNavigation.dart';
 import 'package:skilltest/services/baseurl.dart';
 
-import '../../../components/already_have_an_account_acheck.dart';
 import '../../../constants.dart';
-import '../../Signup/signup_screen.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({
@@ -28,6 +26,7 @@ class _LoginFormState extends State<LoginForm> {
   final TextEditingController _passwordController = TextEditingController();
   bool isPasswordVisible = false;
   late SharedPreferences _preferences;
+  bool _isLoading = false; // New variable to track loading state
   void togglePasswordVisibility() {
     setState(() {
       isPasswordVisible = !isPasswordVisible;
@@ -56,6 +55,9 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<void> _loginUser() async {
+    setState(() {
+      _isLoading = true; // Start loading
+    });
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -89,6 +91,9 @@ class _LoginFormState extends State<LoginForm> {
             key: 'email', value: responseData?['user']?['email']);
         await secureStorage.write(
             key: 'password', value: responseData?['user']?['password']);
+        await secureStorage.write(
+            key: 'customerID',
+            value: responseData?['user']?['cust_id'].toString());
         if (userData != null) {
           User user = User.fromJson(userData);
 
@@ -115,6 +120,14 @@ class _LoginFormState extends State<LoginForm> {
             animationType: AnimationType.fromTop,
           ).show(context);
         }
+      } else if (response.statusCode == 403) {
+        // Decode the response body to access the error message
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        MotionToast.warning(
+          description: Text(responseData['error']),
+          position: MotionToastPosition.top,
+          animationType: AnimationType.fromTop,
+        ).show(context);
       } else {
         MotionToast.warning(
           description: Text("Incorrect Email or Password"),
@@ -129,6 +142,10 @@ class _LoginFormState extends State<LoginForm> {
         position: MotionToastPosition.top,
         animationType: AnimationType.fromTop,
       ).show(context);
+    } finally {
+      setState(() {
+        _isLoading = false; // Stop loading after request completes
+      });
     }
   }
 
@@ -184,47 +201,22 @@ class _LoginFormState extends State<LoginForm> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: defaultPadding / 4),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    // Add your logic for the "Forgot Password?" action here
-                  },
-                  child: const Text(
-                    "Forgot Password?",
-                    style: TextStyle(color: kPrimaryColor),
+            const SizedBox(height: 20),
+            _isLoading // Show loading indicator if loading
+                ? CircularProgressIndicator() // Show loader during login
+                : Hero(
+                    tag: "login_btn",
+                    child: ElevatedButton(
+                      onPressed: _loginUser,
+                      child: Text(
+                        "Login".toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: defaultPadding / 8),
-            Hero(
-              tag: "login_btn",
-              child: ElevatedButton(
-                onPressed: _loginUser,
-                child: Text(
-                  "Login".toUpperCase(),
-                  style: TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: defaultPadding),
-            AlreadyHaveAnAccountCheck(
-              press: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) {
-                      return const SignUpScreen();
-                    },
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
