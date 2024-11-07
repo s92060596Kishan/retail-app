@@ -52,6 +52,9 @@ dependencies:
   barcode_scan2: ^4.3.3
   dropdown_search: ^5.0.3
   search_choices: ^2.2.10
+  drag_select_grid_view: ^0.6.2
+  auto_size_text: ^3.0.0
+  package_info_plus: ^5.0.1
 
 dev_dependencies:
   flutter_test:

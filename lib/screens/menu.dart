@@ -23,7 +23,7 @@ class _MenuScreenState extends State<MenuScreen> {
     final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
     try {
-      String? userId = await secureStorage.read(key: 'id');
+      String? userId = await secureStorage.read(key: 'user_id');
       if (userId != null) {
         final response = await http.get(
           Uri.parse(baseURL + 'getmobileuser/$userId'),
@@ -33,7 +33,7 @@ class _MenuScreenState extends State<MenuScreen> {
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseData = json.decode(response.body);
           final userMap = responseData as Map<String, dynamic>;
-          final userId = int.tryParse(userMap['cust_id'].toString());
+          final userId = int.tryParse(userMap['id'].toString());
 
           if (userId != null) {
             final updatedUser = User(
@@ -48,7 +48,7 @@ class _MenuScreenState extends State<MenuScreen> {
               user1 = updatedUser;
             });
 
-            await secureStorage.write(key: 'id', value: userId.toString());
+            await secureStorage.write(key: 'user_id', value: userId.toString());
             await secureStorage.write(
                 key: 'name', value: updatedUser.userName ?? '');
             await secureStorage.write(

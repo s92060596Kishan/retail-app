@@ -50,7 +50,8 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-
+        versionCode 1 // Increment for each release
+        versionName "1.0.0" // Matches the semantic version
     }
 
     buildTypes {

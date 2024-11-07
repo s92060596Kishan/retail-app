@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:skilltest/screens/selectItemeditscreen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/currencyget.dart';
 
 class DepartmentsEditScreen extends StatefulWidget {
   final String filterValue;
@@ -32,7 +33,8 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
   bool isSearchExpanded = true; // New state to control expansion
   Map<String, List<Map<String, dynamic>>> departmentItemsMap = {};
   List<Map<String, dynamic>> departmentsList = [];
-
+  double totalSalesAmount = 0.0;
+  int totalSalesCount = 0;
   @override
   void initState() {
     super.initState();
@@ -169,7 +171,8 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
         final filteredItems = items.where((item) {
           final itemTransactionId = item['transaction_id'].toString();
           print('Checking item with transaction_id: $itemTransactionId');
-          return transactionIds.contains(itemTransactionId);
+          return transactionIds.contains(itemTransactionId) &&
+              (item['dep_id'] != 0);
         }).toList();
 
         print('filteredItems: $filteredItems');
@@ -179,7 +182,8 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
 
           // Clear previous mapping
           departmentItemsMap = {};
-
+          totalSalesAmount = 0.0;
+          totalSalesCount = 0;
           // Create a map of department ID to its filtered items
           for (var item in filteredItems) {
             final String depId = item['dep_id'].toString();
@@ -187,6 +191,9 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
               departmentItemsMap[depId] = [];
             }
             departmentItemsMap[depId]!.add(item);
+            // Summing up total sales amount and sales count per department
+            totalSalesAmount += double.tryParse(item['amount'].toString()) ?? 0;
+            totalSalesCount += 1;
           }
           isLoading = false;
         });
@@ -219,14 +226,22 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
       ),
     ).then((result) {
       if (result == true) {
-        // Refresh or update data
-        // fetchTransactions(
-        //     selectedUserId ?? 'All'); // Or however you fetch the data
+        // Refresh your data here
+        print(widget.filterValue);
+        fetchTransactions(widget.filterValue);
       }
     });
   }
 
+  // void _refreshDepartments() async {
+  //   fetchTransactions(widget.filterValue); // Your fetching logic
+  // }
+
   Widget _buildDepartmentsView() {
+    String? currencySymbol =
+        CurrencyService().currencySymbol; // Get the currency symbol
+    double totalSalesAmount = 0.0; // Initialize total sales amount
+
     // Filter departmentsList to only include departments with related items
     final filteredDepartments = departmentsList.where((department) {
       final String departmentId = department['departments_id'].toString();
@@ -234,61 +249,188 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
           departmentItemsMap[departmentId]!.isNotEmpty;
     }).toList();
 
+    // Calculate total departments and total sales
+    int totalDepartments = filteredDepartments.length;
+    totalSalesAmount = filteredDepartments.fold(0.0, (sum, department) {
+      final String departmentId = department['departments_id'].toString();
+      final List<Map<String, dynamic>> items =
+          departmentItemsMap[departmentId] ?? [];
+      return sum +
+          items.fold(
+              0.0,
+              (deptSum, item) =>
+                  deptSum + (double.tryParse(item['amount'].toString()) ?? 0));
+    });
+
     return isLoading
         ? Center(
             child: CircularProgressIndicator(), // Loading indicator
           )
-        : filteredDepartments.isEmpty
-            ? Center(
-                child: Text(
-                  'No departments with transactions found.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+        : Column(
+            children: [
+              // Fixed Container for Total Departments and Total Sales Amount
+              Container(
+                width: double.infinity, // Makes the container take full width
+                padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                decoration: BoxDecoration(
+                  color: Colors.teal, // Background color
+                  borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(10)), // Rounded corners
                 ),
-              )
-            : GridView.builder(
-                padding: EdgeInsets.all(8),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.5,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment
+                          .spaceBetween, // Use space between for distribution
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.store,
+                              size: 30, // Icon size
+                              color: Colors.white,
+                            ),
+                            SizedBox(
+                                width: 10), // Spacing between icon and text
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total Departments',
+                                  style: TextStyle(
+                                    fontSize: 16, // Font size
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '$totalDepartments',
+                                  style: TextStyle(
+                                    fontSize: 24, // Font size for the number
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        // Optionally, you can add a SizedBox for spacing between rows
+                        SizedBox(width: 20), // Add spacing between rows
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Sales Amount',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '$currencySymbol ${totalSalesAmount.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 20, // Font size for the amount
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                itemCount: filteredDepartments.length,
-                itemBuilder: (context, index) {
-                  final department = filteredDepartments[index];
-                  final int departmentId = department['departments_id'];
-                  final String departmentName = department['name'];
-
-                  return GestureDetector(
-                    onTap: () {
-                      _navigateToTransactionScreen(
-                          departmentId, departmentName, department);
-                    },
-                    child: Card(
-                      color: Colors.teal[100],
-                      elevation: 4.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: Center(
+              ),
+              Expanded(
+                child: filteredDepartments.isEmpty
+                    ? Center(
                         child: Text(
-                          departmentName,
-                          textAlign: TextAlign.center,
+                          'No departments with transactions found.',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: Colors.white,
                           ),
                         ),
+                      )
+                    : GridView.builder(
+                        padding: EdgeInsets.all(8),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1.5,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemCount: filteredDepartments.length,
+                        itemBuilder: (context, index) {
+                          final department = filteredDepartments[index];
+                          final int departmentId = department['departments_id'];
+                          final String departmentName = department['name'];
+                          final List<Map<String, dynamic>> items =
+                              departmentItemsMap[departmentId.toString()] ?? [];
+
+                          // Calculate total sales for the current department
+                          double departmentTotal = items.fold(0.0, (sum, item) {
+                            return sum +
+                                (double.tryParse(item['amount'].toString()) ??
+                                    0);
+                          });
+                          int departmentSalesCount = items.length;
+
+                          return GestureDetector(
+                            onTap: () {
+                              _navigateToTransactionScreen(
+                                  departmentId, departmentName, department);
+                            },
+                            child: Card(
+                              color: Colors.teal[100],
+                              elevation: 4.0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      departmentName,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Sales: $currencySymbol ${departmentTotal.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Items Sold: $departmentSalesCount',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  );
-                },
-              );
+              ),
+            ],
+          );
   }
 
   @override

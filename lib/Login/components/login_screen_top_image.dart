@@ -11,10 +11,10 @@ class LoginScreenTopImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
-          "PV-Retails LOGIN",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
+        // const Text(
+        //   "PV-Retails LOGIN",
+        //   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        // ),
         const SizedBox(height: defaultPadding * 2),
         Row(
           children: [

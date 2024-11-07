@@ -614,7 +614,7 @@ class _DateRangeLogScreenState extends State<DateRangeLogScreen> {
                   departmentItemsMap[departmentId] ?? [];
               // Filter items where 'fired' is 1
               final filteredItems =
-                  items.where((item) => item['fired'] == 1).toList();
+                  items.where((item) => item['fired'] == 0).toList();
               return filteredItems.isNotEmpty;
             }).map((department) {
               final String departmentId =
@@ -624,7 +624,7 @@ class _DateRangeLogScreenState extends State<DateRangeLogScreen> {
                   departmentItemsMap[departmentId] ?? [];
               // Filter items where 'fired' is 1
               final filteredItems =
-                  items.where((item) => item['fired'] == 1).toList();
+                  items.where((item) => item['fired'] == 0).toList();
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

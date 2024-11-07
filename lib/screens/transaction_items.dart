@@ -44,7 +44,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           setState(() {
             // Filter items where 'fired' is 1
             transactionItems = data
-                .where((item) => item['fired'] == 1)
+                .where((item) => item['fired'] == 0)
                 .map((item) => {
                       'id': item['id'] ?? '',
                       'transaction_id': item['transaction_id'] ?? '',

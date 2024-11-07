@@ -94,6 +94,28 @@ class _LoginFormState extends State<LoginForm> {
         await secureStorage.write(
             key: 'customerID',
             value: responseData?['user']?['cust_id'].toString());
+        // Extract and handle shop IDs
+        dynamic shopIds = userData?['shopId']; // Could be a String or List
+
+// Check if shopIds is a list or a string
+        if (shopIds is String) {
+          // If it's a single string, treat it as a single shop ID
+          shopIds = [shopIds]; // Convert it to a list
+        } else if (shopIds is List) {
+          // Convert all elements to strings if needed
+          shopIds = shopIds.map((id) => id.toString()).toList();
+        }
+
+// Save shop IDs in secure storage
+        if (shopIds != null && shopIds.isNotEmpty) {
+          String shopIdsString =
+              shopIds.join(','); // Convert list to comma-separated string
+          await secureStorage.write(
+              key: 'shop_ids', value: shopIdsString); // Save as '1020,1022'
+          _preferences.setString(
+              'shopIds', shopIdsString); // Save in shared preferences
+        }
+
         if (userData != null) {
           User user = User.fromJson(userData);
 

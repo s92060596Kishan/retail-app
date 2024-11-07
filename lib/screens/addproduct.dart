@@ -11,8 +11,11 @@ import 'package:skilltest/services/baseurl.dart';
 class Department {
   final int id;
   final String name;
-  final String vat;
-  Department({required this.id, required this.name, required this.vat});
+
+  Department({
+    required this.id,
+    required this.name,
+  });
 
   @override
   String toString() {
@@ -48,11 +51,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
   VAT? selectedVat;
   List<VAT> vats = [];
   bool isLoading = false; // Loading state variable
+  bool isLoadingDepartments = true; // Loading state for departments
+  bool isLoadingVats = true; // Loading state for VATs
 
   @override
   void initState() {
     super.initState();
     fetchDepartments(); // Fetch departments when the widget is created
+    fetchVats();
   }
 
   Future<void> fetchDepartments() async {
@@ -68,14 +74,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
       List<dynamic> jsonResponse = json.decode(response.body);
       setState(() {
         departments = jsonResponse
-            .map<Department>((dept) => Department(
-                id: dept['departments_id'],
-                name: dept['name'],
-                vat: dept['vat']))
+            .map<Department>((dept) =>
+                Department(id: dept['departments_id'], name: dept['name']))
             .toList();
+        isLoadingDepartments = false;
       });
     } else {
       throw Exception('Failed to load departments');
+    }
+  }
+
+  Future<void> fetchVats() async {
+    final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    String? custId = await secureStorage.read(key: 'id');
+
+    final response = await http.get(
+      Uri.parse(baseURL + 'getvats/$custId'), // Adjust the endpoint as needed
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonResponse = json.decode(response.body);
+      setState(() {
+        vats = jsonResponse
+            .map<VAT>((vat) => VAT(id: vat['vatId'], vatValue: vat['vat']))
+            .toList();
+        isLoadingVats = false;
+      });
+    } else {
+      throw Exception('Failed to load VATs');
     }
   }
 
@@ -90,7 +117,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 // Fetch product details by barcode
   Future<void> fetchProductDetails(String barcode) async {
     final FlutterSecureStorage secureStorage = FlutterSecureStorage();
-    String? custId = await secureStorage.read(key: 'customerID');
+    String? custId = await secureStorage.read(key: 'id');
     // Create the JSON body
     final body = jsonEncode({
       'barcode': barcode,
@@ -155,7 +182,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       'barcode': barcodeController.text,
       'price': priceController.text,
       'departmentId': selectedDepartment?.id,
-      'vat': vatController.text,
+      'vat': selectedVat?.vatValue,
       'stock': stockController.text
     };
 
@@ -188,6 +215,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       Navigator.pop(context);
     } else {
+      print(response.statusCode);
       MotionToast.error(
         description: Text("Failed to add Product.Barcode already exist"),
         position: MotionToastPosition.top,
@@ -268,70 +296,146 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   border: Border.all(color: Colors.blueAccent),
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: SearchChoices.single(
-                  items: departments
-                      .map((dept) => DropdownMenuItem<Department>(
-                            value: dept,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.2),
-                                    blurRadius: 5,
-                                    offset: Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                dept.name,
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600),
-                              ),
+                child:
+                    isLoadingDepartments // Check loading state for departments
+                        ? Center(child: CircularProgressIndicator())
+                        : SearchChoices.single(
+                            items: departments
+                                .map((dept) => DropdownMenuItem<Department>(
+                                      value: dept,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 8, horizontal: 12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.grey.withOpacity(0.2),
+                                              blurRadius: 5,
+                                              offset: Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          dept.name,
+                                          style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                            value: selectedDepartment,
+                            hint: Text(
+                              "Select a Department",
+                              style: TextStyle(color: Colors.white),
                             ),
-                          ))
-                      .toList(),
-                  value: selectedDepartment,
-                  hint: Text(
-                    "Select a Department",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  searchHint: "Select Department",
-                  onChanged: (value) {
-                    setState(() {
-                      selectedDepartment = value as Department?;
-                      vatController.text =
-                          selectedDepartment?.vat ?? ''; // Set VAT value
-                    });
-                  },
-                  isExpanded: true,
-                  icon: Icon(Icons.arrow_drop_down, color: Colors.white),
-                  clearIcon: Icon(Icons.clear, color: Colors.white),
-                  style: TextStyle(color: Colors.white),
-                  searchFn: (String keyword,
-                      List<DropdownMenuItem<Department>> items) {
-                    List<int> filteredIndexes = [];
-                    for (int i = 0; i < items.length; i++) {
-                      if (items[i]
-                          .value!
-                          .name
-                          .toLowerCase()
-                          .contains(keyword.toLowerCase())) {
-                        filteredIndexes.add(i);
-                      }
-                    }
-                    return filteredIndexes;
-                  },
-                ),
+                            searchHint: "Select Department",
+                            onChanged: (value) {
+                              setState(() {
+                                selectedDepartment = value as Department?;
+                              });
+                            },
+                            isExpanded: true,
+                            icon: Icon(Icons.arrow_drop_down,
+                                color: Colors.white),
+                            clearIcon: Icon(Icons.clear, color: Colors.white),
+                            style: TextStyle(color: Colors.white),
+                            searchFn: (String keyword,
+                                List<DropdownMenuItem<Department>> items) {
+                              List<int> filteredIndexes = [];
+                              for (int i = 0; i < items.length; i++) {
+                                if (items[i]
+                                    .value!
+                                    .name
+                                    .toLowerCase()
+                                    .contains(keyword.toLowerCase())) {
+                                  filteredIndexes.add(i);
+                                }
+                              }
+                              return filteredIndexes;
+                            },
+                          ),
               ),
               SizedBox(height: 16),
-              buildTextField('VAT', vatController, TextInputType.text,
-                  true), // Pass true to make it read-only
+              Text('VAT',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white)),
+              SizedBox(height: 8),
+              Container(
+                constraints: BoxConstraints(maxHeight: 80),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blueAccent),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: isLoadingVats // Check loading state for departments
+                    ? Center(child: CircularProgressIndicator())
+                    : SearchChoices.single(
+                        items: vats
+                            .map((vat) => DropdownMenuItem<VAT>(
+                                  value: vat,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 8, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.2),
+                                          blurRadius: 5,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      vat.vatValue,
+                                      style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                        value: selectedVat,
+                        hint: Text(
+                          "Select VAT",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        searchHint: "Select VAT",
+                        onChanged: (value) {
+                          setState(() {
+                            selectedVat = value as VAT?;
+                          });
+                        },
+                        isExpanded: true,
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.white),
+                        clearIcon: Icon(Icons.clear, color: Colors.white),
+                        style: TextStyle(color: Colors.white),
+                        searchFn: (String keyword,
+                            List<DropdownMenuItem<VAT>> items) {
+                          List<int> filteredIndexes = [];
+                          for (int i = 0; i < items.length; i++) {
+                            if (items[i]
+                                .value!
+                                .vatValue
+                                .toLowerCase()
+                                .contains(keyword.toLowerCase())) {
+                              filteredIndexes.add(i);
+                            }
+                          }
+                          return filteredIndexes;
+                        },
+                      ),
+              ),
               buildTextField(
                   'Initial Stock', stockController, TextInputType.number),
               SizedBox(height: 30),

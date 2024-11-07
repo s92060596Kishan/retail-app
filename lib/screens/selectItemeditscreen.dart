@@ -1,11 +1,12 @@
 import 'dart:convert';
 
+import 'package:drag_select_grid_view/drag_select_grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:motion_toast/motion_toast.dart';
 import 'package:skilltest/services/baseurl.dart';
-import 'package:skilltest/services/currencyget.dart'; // For JSON encoding
+import 'package:skilltest/services/currencyget.dart';
 
 class TransactionItemsScreen extends StatefulWidget {
   final int departmentId;
@@ -27,15 +28,29 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
   List<bool> selectedItems = [];
   double totalAmount = 0.0;
   List<Map<String, dynamic>> departmentItems = [];
-  bool isLoading = false; // Add this variable to track loading state
+  bool isLoading = false;
+  late DragSelectGridViewController controller;
 
   @override
   void initState() {
     super.initState();
-    departmentItems = widget.items;
-    departmentItems =
-        departmentItems.where((item) => item['fired'] == 1).toList();
+    departmentItems = widget.items.where((item) => item['fired'] == 0).toList();
     selectedItems = List<bool>.filled(departmentItems.length, false);
+    controller = DragSelectGridViewController();
+    controller.addListener(_onSelectionChanged);
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_onSelectionChanged);
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _onSelectionChanged() {
+    setState(() {
+      _calculateTotalAmount();
+    });
   }
 
   @override
@@ -46,109 +61,133 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
         backgroundColor: Colors.teal,
         title: Text(
           '${widget.departmentName} - Items',
-          style: TextStyle(
+          style: const TextStyle(
               fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        // backgroundColor: Colors.teal, // Customize color
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF001a1a), // Start color
-              Color(0xFF005959), // Middle color
-              Color(0xFF0fbf7f), // End color
+              Color(0xFF001a1a),
+              Color(0xFF005959),
+              Color(0xFF0fbf7f),
             ],
           ),
         ),
-        padding: const EdgeInsets.all(16.0), // Add padding around the body
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Expanded(
-              child: ListView.builder(
+              child: DragSelectGridView(
+                gridController: controller,
                 itemCount: departmentItems.length,
-                itemBuilder: (context, index) {
+                itemBuilder: (context, index, selected) {
                   final item = departmentItems[index];
                   final transactionId = item['transaction_id'] ?? 'N/A';
                   final quantity = item['quantity'] ?? 0;
                   final amount =
                       (double.tryParse(item['amount'].toString()) ?? 0.0);
 
-                  return Card(
-                    elevation: 5.0, // Add shadow effect
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 8.0), // Space between cards
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12.0), // Rounded corners
-                    ),
-                    child: CheckboxListTile(
-                      title: Text(
-                        item['item'] ?? 'Unknown Item',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal, // Customize text color
-                        ),
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedItems[index] = !selectedItems[index];
+                        _calculateTotalAmount();
+                      });
+                    },
+                    child: Card(
+                      elevation: 5.0,
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
                       ),
-                      subtitle: Text(
-                        'Transaction ID: $transactionId\n'
-                        'Quantity: $quantity\n'
-                        'Total Amount: \ $currencySymbol ${amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: Colors.grey[700], // Customize text color
-                        ),
+                      child: Stack(
+                        children: [
+                          Padding(
+                            padding:
+                                const EdgeInsets.all(8.0), // Increased padding
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['item'] ?? 'Unknown Item',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal,
+                                  ),
+                                ),
+                                const SizedBox(height: 4.0),
+                                Text(
+                                  'Transaction ID: $transactionId\n'
+                                  'Quantity: $quantity\n'
+                                  'Total Amount: $currencySymbol ${amount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            right: 8.0,
+                            top: MediaQuery.of(context).size.height *
+                                0.05, // Center it vertically inside the card
+                            child:
+                                controller.value.selectedIndexes.contains(index)
+                                    ? const Icon(Icons.check_circle,
+                                        color: Colors.green,
+                                        size: 30) // Adjust size as needed
+                                    : const Icon(Icons.circle_outlined,
+                                        color: Colors.grey,
+                                        size: 30), // Adjust size as needed
+                          ),
+                        ],
                       ),
-                      value: selectedItems[index],
-                      onChanged: (bool? value) {
-                        setState(() {
-                          selectedItems[index] = value ?? false;
-                          _calculateTotalAmount();
-                        });
-                      },
                     ),
                   );
                 },
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 1,
+                  mainAxisSpacing: 10.0,
+                  crossAxisSpacing: 10.0,
+                  childAspectRatio:
+                      3.0, // Reduced height by changing aspect ratio
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Text(
-                'Total Amount: \ $currencySymbol ${totalAmount.toStringAsFixed(2)}',
-                style: TextStyle(
+                'Total Amount: $currencySymbol ${totalAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
                   fontSize: 18.0,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white, // Customize text color
+                  color: Colors.white,
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : _confirmSelection, // Disable button while loading
+                onPressed: isLoading ? null : _confirmSelection,
                 style: ElevatedButton.styleFrom(
-                  primary: Color.fromARGB(
-                      255, 94, 197, 245), // Customize button color
-                  padding: EdgeInsets.symmetric(
-                      vertical: 12.0, horizontal: 20.0), // Customize padding
+                  primary: const Color.fromARGB(255, 94, 197, 245),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12.0, horizontal: 20.0),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(10.0), // Rounded corners
+                    borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
                 child: isLoading
-                    ? CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white), // Loading indicator color
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       )
                     : const Text(
                         'Confirm Selection',
-                        style: TextStyle(
-                            fontSize: 16.0,
-                            color: Colors.black), // Customize text size
+                        style: TextStyle(fontSize: 16.0, color: Colors.black),
                       ),
               ),
             ),
@@ -161,7 +200,7 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
   void _calculateTotalAmount() {
     totalAmount = 0.0;
     for (int i = 0; i < departmentItems.length; i++) {
-      if (selectedItems[i]) {
+      if (controller.value.selectedIndexes.contains(i)) {
         final amount =
             double.tryParse(departmentItems[i]['amount'].toString()) ?? 0.0;
         totalAmount += amount;
@@ -172,13 +211,10 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
   Future<void> _confirmSelection() async {
     List<Map<String, dynamic>> selectedItemsList = [];
     for (int i = 0; i < departmentItems.length; i++) {
-      if (selectedItems[i]) {
+      if (controller.value.selectedIndexes.contains(i)) {
         selectedItemsList.add(departmentItems[i]);
       }
     }
-
-    // Debug print for confirmation
-    print('Selected Items: $selectedItemsList');
 
     setState(() {
       isLoading = true; // Start loading
@@ -192,18 +228,23 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
     });
 
     if (success) {
-      // Show a success message or navigate to another screen
+      Navigator.of(context).pop(true); // Ensure we're using the correct context
       MotionToast.success(
-        //title: Text("Delete Successfully"),
-        description: Text("Item updated successfully."),
+        description: const Text("Item updated successfully."),
         position: MotionToastPosition.top,
         animationType: AnimationType.fromTop,
       ).show(context);
+
+      // Navigate back after showing the toast
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.of(context)
+              .pop(true); // Ensure we're using the correct context
+        }
+      });
     } else {
-      // Handle failure case
       MotionToast.error(
-        //title: Text("Delete Successfully"),
-        description: Text("Updated item Unsuccessfully."),
+        description: const Text("Failed to update items."),
         position: MotionToastPosition.top,
         animationType: AnimationType.fromTop,
       ).show(context);
@@ -219,7 +260,7 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
       'departmentId': widget.departmentId,
       'items': selectedItemsList,
       'totalAmount': totalAmount,
-      'custID': Cust_id
+      'custID': Cust_id,
     });
 
     try {

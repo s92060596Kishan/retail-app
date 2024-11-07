@@ -24,16 +24,24 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
 
   Future<List<dynamic>> fetchShopDetails() async {
     String? id = await secureStorage.read(key: 'user_id');
+    String? shopIdsString = await secureStorage.read(key: 'shop_ids');
     try {
       final response = await http.get(
-        Uri.parse(
-            baseURL + 'getshopdetails/$id'), // Replace with your API endpoint
+        Uri.parse(baseURL + 'getMobileshop'), // Replace with your API endpoint
         headers: headers, // Ensure you have the headers defined
       );
 
       if (response.statusCode == 200) {
+        print('Response: ${response.body}');
+        print('Status code: ${response.statusCode}');
         List<dynamic> data = jsonDecode(response.body);
-        return data;
+        // Filter shops based on shopIds
+        List<dynamic> filteredShops = data.where((shop) {
+          return shopIdsString?.contains(shop['cust_id'].toString()) ??
+              false; // Compare as strings
+        }).toList();
+
+        return filteredShops;
       } else {
         throw Exception('Failed to load shop details');
       }
