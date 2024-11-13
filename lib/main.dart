@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/constants.dart';
 import 'package:skilltest/services/baseurl.dart';
 import 'package:skilltest/services/connectivity_service.dart';
-import 'package:provider/provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await fetchApiKey(); // Ensure API key is fetched before running the app
   //await CurrencyService().fetchCurrencyValue();
- runApp(
+  runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
-            primary: kPrimaryColor,
+            backgroundColor: kPrimaryColor,
             shape: const StadiumBorder(),
             maximumSize: const Size(200, 56),
             minimumSize: const Size(200, 56),

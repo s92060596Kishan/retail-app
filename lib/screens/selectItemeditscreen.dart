@@ -187,7 +187,7 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : _confirmSelection,
                   style: ElevatedButton.styleFrom(
-                    primary: const Color.fromARGB(255, 94, 197, 245),
+                    backgroundColor: const Color.fromARGB(255, 94, 197, 245),
                     padding: const EdgeInsets.symmetric(
                         vertical: 12.0, horizontal: 20.0),
                     shape: RoundedRectangleBorder(

@@ -462,11 +462,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           onPressed: addProduct,
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 18),
+                            backgroundColor: Colors.blueAccent,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15),
                             ),
                             elevation: 8,
-                            primary: Colors.blueAccent,
                           ),
                           child: Text(
                             'Add Product',

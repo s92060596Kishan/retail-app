@@ -107,7 +107,7 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                           onPressed: _refreshShopList,
                           child: Text('Retry'),
                           style: ElevatedButton.styleFrom(
-                            primary: Colors.teal,
+                            backgroundColor: Colors.teal,
                           ),
                         ),
                       ],
@@ -131,7 +131,7 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
                             style: TextStyle(color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            primary: Colors.teal,
+                            backgroundColor: Colors.teal,
                           ),
                         ),
                       ],

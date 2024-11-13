@@ -428,7 +428,7 @@ class _SelectedProductsScreenState extends State<SelectedProductsScreen> {
                       onPressed: _saveProducts,
                       child: Text("Save Products"),
                       style: ElevatedButton.styleFrom(
-                        primary: Colors.green,
+                        backgroundColor: Colors.green,
                       ),
                     ),
                   ),
