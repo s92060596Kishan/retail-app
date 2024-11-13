@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:motion_toast/motion_toast.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class TransactionItemsScreen extends StatefulWidget {
   final int departmentId;
@@ -56,145 +59,157 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.teal,
-        title: Text(
-          '${widget.departmentName} - Items',
-          style: const TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.teal,
+          title: Text(
+            '${widget.departmentName} - Items',
+            style: const TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
         ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF001a1a),
-              Color(0xFF005959),
-              Color(0xFF0fbf7f),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF001a1a),
+                Color(0xFF005959),
+                Color(0xFF0fbf7f),
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Expanded(
+                child: DragSelectGridView(
+                  gridController: controller,
+                  itemCount: departmentItems.length,
+                  itemBuilder: (context, index, selected) {
+                    final item = departmentItems[index];
+                    final transactionId = item['transaction_id'] ?? 'N/A';
+                    final quantity = item['quantity'] ?? 0;
+                    final amount =
+                        (double.tryParse(item['amount'].toString()) ?? 0.0);
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedItems[index] = !selectedItems[index];
+                          _calculateTotalAmount();
+                        });
+                      },
+                      child: Card(
+                        elevation: 5.0,
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(
+                                  8.0), // Increased padding
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['item'] ?? 'Unknown Item',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4.0),
+                                  Text(
+                                    'Transaction ID: $transactionId\n'
+                                    'Quantity: $quantity\n'
+                                    'Total Amount: $currencySymbol ${amount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              right: 8.0,
+                              top: MediaQuery.of(context).size.height *
+                                  0.05, // Center it vertically inside the card
+                              child: controller.value.selectedIndexes
+                                      .contains(index)
+                                  ? const Icon(Icons.check_circle,
+                                      color: Colors.green,
+                                      size: 30) // Adjust size as needed
+                                  : const Icon(Icons.circle_outlined,
+                                      color: Colors.grey,
+                                      size: 30), // Adjust size as needed
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 1,
+                    mainAxisSpacing: 10.0,
+                    crossAxisSpacing: 10.0,
+                    childAspectRatio:
+                        3.0, // Reduced height by changing aspect ratio
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Text(
+                  'Total Amount: $currencySymbol ${totalAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _confirmSelection,
+                  style: ElevatedButton.styleFrom(
+                    primary: const Color.fromARGB(255, 94, 197, 245),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12.0, horizontal: 20.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : const Text(
+                          'Confirm Selection',
+                          style: TextStyle(fontSize: 16.0, color: Colors.black),
+                        ),
+                ),
+              ),
             ],
           ),
         ),
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: DragSelectGridView(
-                gridController: controller,
-                itemCount: departmentItems.length,
-                itemBuilder: (context, index, selected) {
-                  final item = departmentItems[index];
-                  final transactionId = item['transaction_id'] ?? 'N/A';
-                  final quantity = item['quantity'] ?? 0;
-                  final amount =
-                      (double.tryParse(item['amount'].toString()) ?? 0.0);
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedItems[index] = !selectedItems[index];
-                        _calculateTotalAmount();
-                      });
-                    },
-                    child: Card(
-                      elevation: 5.0,
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      child: Stack(
-                        children: [
-                          Padding(
-                            padding:
-                                const EdgeInsets.all(8.0), // Increased padding
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['item'] ?? 'Unknown Item',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal,
-                                  ),
-                                ),
-                                const SizedBox(height: 4.0),
-                                Text(
-                                  'Transaction ID: $transactionId\n'
-                                  'Quantity: $quantity\n'
-                                  'Total Amount: $currencySymbol ${amount.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            right: 8.0,
-                            top: MediaQuery.of(context).size.height *
-                                0.05, // Center it vertically inside the card
-                            child:
-                                controller.value.selectedIndexes.contains(index)
-                                    ? const Icon(Icons.check_circle,
-                                        color: Colors.green,
-                                        size: 30) // Adjust size as needed
-                                    : const Icon(Icons.circle_outlined,
-                                        color: Colors.grey,
-                                        size: 30), // Adjust size as needed
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 1,
-                  mainAxisSpacing: 10.0,
-                  crossAxisSpacing: 10.0,
-                  childAspectRatio:
-                      3.0, // Reduced height by changing aspect ratio
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Text(
-                'Total Amount: $currencySymbol ${totalAmount.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: ElevatedButton(
-                onPressed: isLoading ? null : _confirmSelection,
-                style: ElevatedButton.styleFrom(
-                  primary: const Color.fromARGB(255, 94, 197, 245),
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12.0, horizontal: 20.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                ),
-                child: isLoading
-                    ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      )
-                    : const Text(
-                        'Confirm Selection',
-                        style: TextStyle(fontSize: 16.0, color: Colors.black),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      );
+    });
   }
 
   void _calculateTotalAmount() {

@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/transaction_items.dart'; // Assuming this is where you want to show transaction details
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class DateRangeLogScreen extends StatefulWidget {
   const DateRangeLogScreen({Key? key}) : super(key: key);
@@ -39,330 +42,342 @@ class _DateRangeLogScreenState extends State<DateRangeLogScreen> {
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Quick Reports'),
-        backgroundColor: Colors.teal,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Collapsible Search and Dropdown Section
-            ExpansionTile(
-              title: Text('Quick Filters'),
-              initiallyExpanded: isSearchExpanded,
-              onExpansionChanged: (bool expanded) {
-                setState(() => isSearchExpanded = expanded);
-              },
-              children: [
-                SizedBox(height: 10),
-                TextFormField(
-                  controller: _startDateController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Start Date',
-                    hintText: 'Select Start Date',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  onTap: () => _selectDate(context, isStartDate: true),
-                ),
-                SizedBox(height: 10),
-                TextFormField(
-                  controller: _endDateController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'End Date',
-                    hintText: 'Select End Date',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  onTap: () => _selectDate(context, isStartDate: false),
-                ),
-                SizedBox(height: 20),
-                SizedBox(
-                  width: 150,
-                  child: ElevatedButton(
-                    onPressed: fetchLogDetails,
-                    style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all<Color>(Colors.green),
-                      padding: MaterialStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(vertical: 15)),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                      ),
-                      textStyle: MaterialStateProperty.all<TextStyle>(
-                        TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Quick Reports'),
+          backgroundColor: Colors.teal,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Collapsible Search and Dropdown Section
+              ExpansionTile(
+                title: Text('Quick Filters'),
+                initiallyExpanded: isSearchExpanded,
+                onExpansionChanged: (bool expanded) {
+                  setState(() => isSearchExpanded = expanded);
+                },
+                children: [
+                  SizedBox(height: 10),
+                  TextFormField(
+                    controller: _startDateController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Start Date',
+                      hintText: 'Select Start Date',
+                      suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    child: Text('Find',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
+                    onTap: () => _selectDate(context, isStartDate: true),
                   ),
-                ),
-                SizedBox(height: 20),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  hint: Text('Select Date Range'),
-                  value: selectedUserId,
-                  items: ['All', ...dateRanges].map((String dateRange) {
-                    return DropdownMenuItem<String>(
-                      value: dateRange,
-                      child: Container(
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width - 60,
+                  SizedBox(height: 10),
+                  TextFormField(
+                    controller: _endDateController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'End Date',
+                      hintText: 'Select End Date',
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    onTap: () => _selectDate(context, isStartDate: false),
+                  ),
+                  SizedBox(height: 20),
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                      onPressed: fetchLogDetails,
+                      style: ButtonStyle(
+                        backgroundColor:
+                            MaterialStateProperty.all<Color>(Colors.green),
+                        padding: MaterialStateProperty.all<EdgeInsets>(
+                            EdgeInsets.symmetric(vertical: 15)),
+                        shape:
+                            MaterialStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
                         ),
-                        child: Text(
-                          dateRange,
-                          overflow: TextOverflow.visible,
+                        textStyle: MaterialStateProperty.all<TextStyle>(
+                          TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedUserId = value;
-                      isSearchExpanded = false; // Collapse on selection
-                      selectedTile = null; // Reset tile selection
-                    });
-                    if (value != null) {
-                      if (value == 'All') {
-                        fetchTransactions('All');
-                      } else {
-                        final userId = dateRangeToUserId[value];
-                        if (userId != null) {
-                          fetchTransactions(userId);
+                      child: Text('Find',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    hint: Text('Select Date Range'),
+                    value: selectedUserId,
+                    items: ['All', ...dateRanges].map((String dateRange) {
+                      return DropdownMenuItem<String>(
+                        value: dateRange,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width - 60,
+                          ),
+                          child: Text(
+                            dateRange,
+                            overflow: TextOverflow.visible,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedUserId = value;
+                        isSearchExpanded = false; // Collapse on selection
+                        selectedTile = null; // Reset tile selection
+                      });
+                      if (value != null) {
+                        if (value == 'All') {
+                          fetchTransactions('All');
+                        } else {
+                          final userId = dateRangeToUserId[value];
+                          if (userId != null) {
+                            fetchTransactions(userId);
+                          }
                         }
                       }
-                    }
-                  },
-                ),
-              ],
-            ),
-            SizedBox(height: 10),
-            if (selectedUserId != null)
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedTile = 'Departments';
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedTile == 'Departments'
-                            ? Colors.blueAccent
-                            : Colors
-                                .grey, // Change background color when active
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16), // Make it more compact
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(12), // Rounded corners
-                        ),
-                      ),
-                      child: Text(
-                        'Departments',
-                        style: TextStyle(
-                          color: selectedTile == 'Departments'
-                              ? Colors.white
-                              : Colors.black, // Change text color when active
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedTile = 'Transactions';
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedTile == 'Transactions'
-                            ? Colors.blueAccent
-                            : Colors
-                                .grey, // Change background color when active
-                        padding: EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16), // Make it more compact
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(12), // Rounded corners
-                        ),
-                      ),
-                      child: Text(
-                        'Transactions',
-                        style: TextStyle(
-                          color: selectedTile == 'Transactions'
-                              ? Colors.white
-                              : Colors.black, // Change text color when active
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                    },
                   ),
                 ],
               ),
-            SizedBox(height: 10),
-            if (selectedTile == 'Departments')
-              Expanded(
-                  child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFF001a1a),
-                            Color(0xFF005959),
-                            Color(0xFF0fbf7f)
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+              SizedBox(height: 10),
+              if (selectedUserId != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedTile = 'Departments';
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedTile == 'Departments'
+                              ? Colors.blueAccent
+                              : Colors
+                                  .grey, // Change background color when active
+                          padding: EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16), // Make it more compact
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(12), // Rounded corners
+                          ),
+                        ),
+                        child: Text(
+                          'Departments',
+                          style: TextStyle(
+                            color: selectedTile == 'Departments'
+                                ? Colors.white
+                                : Colors.black, // Change text color when active
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      child: _buildDepartmentsView())),
-            if (selectedTile == 'Transactions')
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF001a1a),
-                        Color(0xFF005959),
-                        Color(0xFF0fbf7f),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
                     ),
-                  ),
-                  child: dataList.isEmpty
-                      ? Center(child: Text('No transactions available.'))
-                      : ListView.builder(
-                          itemCount: dataList.length,
-                          itemBuilder: (context, index) {
-                            final transaction = dataList[index];
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Card(
-                                elevation: 4.0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.0),
-                                ),
-                                child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(
-                                      vertical: 10, horizontal: 15),
-                                  title: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${transaction['title']}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blueGrey[700],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'Total Payable: $currencySymbol ${transaction['total_payable'].toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blueAccent,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'Paid Amount: $currencySymbol ${transaction['cus_paid_amount'].toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          color: const Color.fromARGB(
-                                              255, 5, 5, 5),
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'Balance: $currencySymbol ${transaction['cus_balance'].toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          color: const Color.fromARGB(
-                                              255, 9, 9, 9),
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        'Transaction Date: ${transaction['transaction_date']}',
-                                        style: TextStyle(
-                                          color: const Color.fromARGB(
-                                              255, 14, 13, 13),
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Type: ${transaction['type']}',
-                                            style: TextStyle(
-                                                color: Colors.grey[600]),
-                                          ),
-                                          Spacer(),
-                                        ],
-                                      ),
-                                      SizedBox(height: 10),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Item Count: ${transaction['item_count']}',
-                                            style: TextStyle(
-                                                color: Colors.grey[600]),
-                                          ),
-                                          Spacer(),
-                                          Text(
-                                            'User ID: ${transaction['user_id']}',
-                                            style: TextStyle(
-                                                color: Colors.grey[600]),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            TransactionDetailPage(
-                                                transactionId: transaction[
-                                                    'transaction_id']),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          },
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedTile = 'Transactions';
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedTile == 'Transactions'
+                              ? Colors.blueAccent
+                              : Colors
+                                  .grey, // Change background color when active
+                          padding: EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16), // Make it more compact
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(12), // Rounded corners
+                          ),
                         ),
+                        child: Text(
+                          'Transactions',
+                          style: TextStyle(
+                            color: selectedTile == 'Transactions'
+                                ? Colors.white
+                                : Colors.black, // Change text color when active
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              )
-          ],
+              SizedBox(height: 10),
+              if (selectedTile == 'Departments')
+                Expanded(
+                    child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF001a1a),
+                              Color(0xFF005959),
+                              Color(0xFF0fbf7f)
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: _buildDepartmentsView())),
+              if (selectedTile == 'Transactions')
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF001a1a),
+                          Color(0xFF005959),
+                          Color(0xFF0fbf7f),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: dataList.isEmpty
+                        ? Center(child: Text('No transactions available.'))
+                        : ListView.builder(
+                            itemCount: dataList.length,
+                            itemBuilder: (context, index) {
+                              final transaction = dataList[index];
+                              return Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Card(
+                                  elevation: 4.0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 15),
+                                    title: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${transaction['title']}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blueGrey[700],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        SizedBox(height: 5),
+                                        Text(
+                                          'Total Payable: $currencySymbol ${transaction['total_payable'].toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blueAccent,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(height: 5),
+                                        Text(
+                                          'Paid Amount: $currencySymbol ${transaction['cus_paid_amount'].toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: const Color.fromARGB(
+                                                255, 5, 5, 5),
+                                          ),
+                                        ),
+                                        SizedBox(height: 5),
+                                        Text(
+                                          'Balance: $currencySymbol ${transaction['cus_balance'].toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: const Color.fromARGB(
+                                                255, 9, 9, 9),
+                                          ),
+                                        ),
+                                        SizedBox(height: 5),
+                                        Text(
+                                          'Transaction Date: ${transaction['transaction_date']}',
+                                          style: TextStyle(
+                                            color: const Color.fromARGB(
+                                                255, 14, 13, 13),
+                                          ),
+                                        ),
+                                        SizedBox(height: 5),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Type: ${transaction['type']}',
+                                              style: TextStyle(
+                                                  color: Colors.grey[600]),
+                                            ),
+                                            Spacer(),
+                                          ],
+                                        ),
+                                        SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Item Count: ${transaction['item_count']}',
+                                              style: TextStyle(
+                                                  color: Colors.grey[600]),
+                                            ),
+                                            Spacer(),
+                                            Text(
+                                              'User ID: ${transaction['user_id']}',
+                                              style: TextStyle(
+                                                  color: Colors.grey[600]),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              TransactionDetailPage(
+                                                  transactionId: transaction[
+                                                      'transaction_id']),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                )
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _selectDate(BuildContext context,

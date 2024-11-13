@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/stockScan.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class SelectedProductsScreen extends StatefulWidget {
   // final List<Map<String, dynamic>> initialSelectedProducts;
@@ -202,219 +205,237 @@ class _SelectedProductsScreenState extends State<SelectedProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-        onWillPop: () async {
-          // Navigate to ScanProductScreen when back button is pressed
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => ScanProductScreen()),
-          );
-          return false; // Returning false to prevent default back navigation
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(
-              "Selected Products",
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            backgroundColor: Colors.teal,
-          ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF001a1a),
-                  Color(0xFF005959),
-                  Color(0xFF0fbf7f)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return WillPopScope(
+          onWillPop: () async {
+            // Navigate to ScanProductScreen when back button is pressed
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ScanProductScreen()),
+            );
+            return false; // Returning false to prevent default back navigation
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(
+                "Selected Products",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
               ),
+              backgroundColor: Colors.teal,
             ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: productsWithQuantity.isEmpty
-                      ? Center(child: Text("No products selected"))
-                      : ListView.builder(
-                          itemCount: productsWithQuantity.length,
-                          itemBuilder: (context, index) {
-                            final product = productsWithQuantity[index];
-                            return Card(
-                              margin: EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 16),
-                              color: Color.fromARGB(255, 97, 97, 97),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product['description'] ??
-                                          'Unknown Product',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    // Raw Stock and Case Stock Row
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        // Raw Stock
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Text(
-                                                "Raw Stock:",
-                                                style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.white),
-                                              ),
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: Icon(Icons.remove,
-                                                        color: Colors.white),
-                                                    onPressed: () {
-                                                      decrementStock(
-                                                          index, true);
-                                                    },
-                                                  ),
-                                                  Expanded(
-                                                    child: TextField(
-                                                      controller:
-                                                          rawStockControllers[
-                                                              index],
-                                                      decoration:
-                                                          InputDecoration(
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                        contentPadding:
-                                                            EdgeInsets
-                                                                .symmetric(
-                                                                    horizontal:
-                                                                        10),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      onChanged: (value) {
-                                                        updateStockCount(
-                                                            index, value, true);
-                                                      },
-                                                    ),
-                                                  ),
-                                                  IconButton(
-                                                    icon: Icon(Icons.add,
-                                                        color: Colors.white),
-                                                    onPressed: () {
-                                                      incrementStock(
-                                                          index, true);
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        SizedBox(width: 16),
-                                        // Case Stock
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Text(
-                                                "Case Stock:",
-                                                style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.white),
-                                              ),
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: Icon(Icons.remove,
-                                                        color: Colors.white),
-                                                    onPressed: () {
-                                                      decrementStock(
-                                                          index, false);
-                                                    },
-                                                  ),
-                                                  Expanded(
-                                                    child: TextField(
-                                                      controller:
-                                                          caseStockControllers[
-                                                              index],
-                                                      decoration:
-                                                          InputDecoration(
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                        contentPadding:
-                                                            EdgeInsets
-                                                                .symmetric(
-                                                                    horizontal:
-                                                                        10),
-                                                      ),
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      onChanged: (value) {
-                                                        updateStockCount(index,
-                                                            value, false);
-                                                      },
-                                                    ),
-                                                  ),
-                                                  IconButton(
-                                                    icon: Icon(Icons.add,
-                                                        color: Colors.white),
-                                                    onPressed: () {
-                                                      incrementStock(
-                                                          index, false);
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 8),
-                                    // Remove Button
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: IconButton(
-                                        icon: Icon(Icons.delete,
-                                            color: Colors.red),
-                                        onPressed: () {
-                                          removeProduct(index);
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF001a1a),
+                    Color(0xFF005959),
+                    Color(0xFF0fbf7f)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                // Save Button
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: _saveProducts,
-                    child: Text("Save Products"),
-                    style: ElevatedButton.styleFrom(
-                      primary: Colors.green,
+              ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: productsWithQuantity.isEmpty
+                        ? Center(child: Text("No products selected"))
+                        : ListView.builder(
+                            itemCount: productsWithQuantity.length,
+                            itemBuilder: (context, index) {
+                              final product = productsWithQuantity[index];
+                              return Card(
+                                margin: EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 16),
+                                color: Color.fromARGB(255, 97, 97, 97),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product['description'] ??
+                                            'Unknown Product',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      // Raw Stock and Case Stock Row
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          // Raw Stock
+                                          Expanded(
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  "Raw Stock:",
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.white),
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Icon(Icons.remove,
+                                                          color: Colors.white),
+                                                      onPressed: () {
+                                                        decrementStock(
+                                                            index, true);
+                                                      },
+                                                    ),
+                                                    Expanded(
+                                                      child: TextField(
+                                                        controller:
+                                                            rawStockControllers[
+                                                                index],
+                                                        decoration:
+                                                            InputDecoration(
+                                                          border:
+                                                              OutlineInputBorder(),
+                                                          contentPadding:
+                                                              EdgeInsets
+                                                                  .symmetric(
+                                                                      horizontal:
+                                                                          10),
+                                                        ),
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        onChanged: (value) {
+                                                          updateStockCount(
+                                                              index,
+                                                              value,
+                                                              true);
+                                                        },
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      icon: Icon(Icons.add,
+                                                          color: Colors.white),
+                                                      onPressed: () {
+                                                        incrementStock(
+                                                            index, true);
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(width: 16),
+                                          // Case Stock
+                                          Expanded(
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  "Case Stock:",
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.white),
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Icon(Icons.remove,
+                                                          color: Colors.white),
+                                                      onPressed: () {
+                                                        decrementStock(
+                                                            index, false);
+                                                      },
+                                                    ),
+                                                    Expanded(
+                                                      child: TextField(
+                                                        controller:
+                                                            caseStockControllers[
+                                                                index],
+                                                        decoration:
+                                                            InputDecoration(
+                                                          border:
+                                                              OutlineInputBorder(),
+                                                          contentPadding:
+                                                              EdgeInsets
+                                                                  .symmetric(
+                                                                      horizontal:
+                                                                          10),
+                                                        ),
+                                                        keyboardType:
+                                                            TextInputType
+                                                                .number,
+                                                        onChanged: (value) {
+                                                          updateStockCount(
+                                                              index,
+                                                              value,
+                                                              false);
+                                                        },
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      icon: Icon(Icons.add,
+                                                          color: Colors.white),
+                                                      onPressed: () {
+                                                        incrementStock(
+                                                            index, false);
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 8),
+                                      // Remove Button
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: IconButton(
+                                          icon: Icon(Icons.delete,
+                                              color: Colors.red),
+                                          onPressed: () {
+                                            removeProduct(index);
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  // Save Button
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      onPressed: _saveProducts,
+                      child: Text("Save Products"),
+                      style: ElevatedButton.styleFrom(
+                        primary: Colors.green,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ));
+          ));
+    });
   }
 }

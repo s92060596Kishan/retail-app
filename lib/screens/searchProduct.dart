@@ -4,8 +4,11 @@ import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class Product {
   final int id;
@@ -157,169 +160,180 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.teal,
-        title: Text(
-          'Products',
-          style: TextStyle(
-              fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.teal,
+          title: Text(
+            'Products',
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
         ),
-      ),
-      body: Container(
-        color: Color.fromARGB(255, 171, 206, 189),
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        child: Column(
-          children: [
-            SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: TextField(
-                controller: _searchController, // Update this line
-                focusNode: _searchFocusNode,
-                decoration: InputDecoration(
-                  labelText: 'Search Products',
-                  hintText: 'Enter product name',
-                  floatingLabelBehavior: FloatingLabelBehavior.auto,
-                  labelStyle: TextStyle(
-                    color: Colors.teal,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  suffixIcon: Icon(Icons.search, color: Colors.teal),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    borderSide: BorderSide(
-                      color: Colors.teal,
-                      width: 2.0,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    borderSide: BorderSide(
-                      color: Colors.blue,
-                      width: 2.5,
-                    ),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 14.0,
-                    horizontal: 16.0,
-                  ),
-                ),
-                style: TextStyle(color: Colors.black, fontSize: 18),
-                cursorColor: Colors.blue,
-                onChanged: updateSearchResults,
-                onTap: () {
-                  setState(() {
-                    selectedProduct = null;
-                  });
-                },
-              ),
-            ),
-            if (!_searchFocusNode.hasFocus)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Divider(
-                      color: Colors.black,
-                      thickness: 1,
-                      indent: 20,
-                      endIndent: 10,
-                    ),
-                  ),
-                  Text(
-                    'or',
-                    style: TextStyle(color: Colors.black, fontSize: 16),
-                  ),
-                  Expanded(
-                    child: Divider(
-                      color: Colors.black,
-                      thickness: 1,
-                      indent: 10,
-                      endIndent: 20,
-                    ),
-                  ),
-                ],
-              ),
-            if (!_searchFocusNode.hasFocus)
+        body: Container(
+          color: Color.fromARGB(255, 171, 206, 189),
+          height: MediaQuery.of(context).size.height,
+          width: MediaQuery.of(context).size.width,
+          child: Column(
+            children: [
+              SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton.icon(
-                  onPressed: scanBarcode,
-                  icon: Icon(
-                    Icons.qr_code_scanner,
-                    size: 28,
-                    color: Colors.white,
+                padding: const EdgeInsets.all(10.0),
+                child: TextField(
+                  controller: _searchController, // Update this line
+                  focusNode: _searchFocusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Search Products',
+                    hintText: 'Enter product name',
+                    floatingLabelBehavior: FloatingLabelBehavior.auto,
+                    labelStyle: TextStyle(
+                      color: Colors.teal,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    suffixIcon: Icon(Icons.search, color: Colors.teal),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide(
+                        color: Colors.teal,
+                        width: 2.0,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      borderSide: BorderSide(
+                        color: Colors.blue,
+                        width: 2.5,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 14.0,
+                      horizontal: 16.0,
+                    ),
                   ),
-                  label: Text(
-                    'Scan Product',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(
-                        255, 51, 122, 53), // Use a custom color (e.g., green)
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                  style: TextStyle(color: Colors.black, fontSize: 18),
+                  cursorColor: Colors.blue,
+                  onChanged: updateSearchResults,
+                  onTap: () {
+                    setState(() {
+                      selectedProduct = null;
+                    });
+                  },
+                ),
+              ),
+              if (!_searchFocusNode.hasFocus)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Colors.black,
+                        thickness: 1,
+                        indent: 20,
+                        endIndent: 10,
+                      ),
+                    ),
+                    Text(
+                      'or',
+                      style: TextStyle(color: Colors.black, fontSize: 16),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Colors.black,
+                        thickness: 1,
+                        indent: 10,
+                        endIndent: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              if (!_searchFocusNode.hasFocus)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton.icon(
+                    onPressed: scanBarcode,
+                    icon: Icon(
+                      Icons.qr_code_scanner,
+                      size: 28,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      'Scan Product',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color.fromARGB(
+                          255, 51, 122, 53), // Use a custom color (e.g., green)
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
                   ),
                 ),
+              Expanded(
+                child: isLoading // Check if loading
+                    ? Center(
+                        child:
+                            CircularProgressIndicator()) // Show loading indicator
+                    : selectedProduct == null
+                        ? searchResults.isEmpty
+                            ? Center(
+                                child: Text(
+                                    'Please search for products to display',
+                                    style: TextStyle(
+                                        color: Colors.black, fontSize: 16)))
+                            : ListView.builder(
+                                itemCount: searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final product = searchResults[index];
+                                  return Card(
+                                    elevation: 6,
+                                    margin: EdgeInsets.symmetric(
+                                        vertical: 6, horizontal: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: ListTile(
+                                      title: Text(
+                                        product.description,
+                                        style: TextStyle(
+                                            color: Colors.teal,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      subtitle: Text(
+                                        '\ $currencySymbol ${product.price}',
+                                        style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 14),
+                                      ),
+                                      trailing: Icon(Icons.arrow_forward,
+                                          color: Colors.teal),
+                                      onTap: () {
+                                        selectProduct(product);
+                                      },
+                                    ),
+                                  );
+                                },
+                              )
+                        : ProductDetails(
+                            product: selectedProduct!,
+                          ),
               ),
-            Expanded(
-              child: isLoading // Check if loading
-                  ? Center(
-                      child:
-                          CircularProgressIndicator()) // Show loading indicator
-                  : selectedProduct == null
-                      ? searchResults.isEmpty
-                          ? Center(
-                              child: Text(
-                                  'Please search for products to display',
-                                  style: TextStyle(
-                                      color: Colors.black, fontSize: 16)))
-                          : ListView.builder(
-                              itemCount: searchResults.length,
-                              itemBuilder: (context, index) {
-                                final product = searchResults[index];
-                                return Card(
-                                  elevation: 6,
-                                  margin: EdgeInsets.symmetric(
-                                      vertical: 6, horizontal: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: ListTile(
-                                    title: Text(
-                                      product.description,
-                                      style: TextStyle(
-                                          color: Colors.teal,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: Text(
-                                      '\ $currencySymbol ${product.price}',
-                                      style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 14),
-                                    ),
-                                    trailing: Icon(Icons.arrow_forward,
-                                        color: Colors.teal),
-                                    onTap: () {
-                                      selectProduct(product);
-                                    },
-                                  ),
-                                );
-                              },
-                            )
-                      : ProductDetails(
-                          product: selectedProduct!,
-                        ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

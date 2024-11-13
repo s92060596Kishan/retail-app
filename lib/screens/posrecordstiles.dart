@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/recorddetailspage.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class PosrecordsPage extends StatefulWidget {
   final List<Map<String, dynamic>> records;
@@ -33,68 +36,84 @@ class _PosrecordsPageState extends State<PosrecordsPage> {
         : widget.records
             .where((record) => record['Rec_Type'] == selectedRecordType)
             .toList();
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
 
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'POS Records',
-            style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          backgroundColor: Colors.teal,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'POS Records',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
+            backgroundColor: Colors.teal,
           ),
-          child: ListView(
-            padding: EdgeInsets.all(16),
-            children: [
-              // Animated Tiles for each record type with space between them
-              ...recordTypes.map((type) {
-                return Column(
-                  children: [
-                    AnimatedTile(
-                      title: type,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RecordTypeDetailsPage(
-                              recordType: type,
-                              records: widget.records,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF001a1a),
+                  Color(0xFF005959),
+                  Color(0xFF0fbf7f)
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: ListView(
+              padding: EdgeInsets.all(16),
+              children: [
+                // Animated Tiles for each record type with space between them
+                ...recordTypes.map((type) {
+                  return Column(
+                    children: [
+                      AnimatedTile(
+                        title: type,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RecordTypeDetailsPage(
+                                recordType: type,
+                                records: widget.records,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      trailing: Icon(Icons.arrow_forward_ios,
-                          color: Colors.white, size: 30), // Add trailing
-                      amount:
-                          '${widget.records.where((record) => record['Rec_Type'] == type).length} Items',
-                    ),
-                    SizedBox(height: 16), // Space between tiles
-                  ],
-                );
-              }).toList(),
-
-              // Display filtered records
-              if (selectedRecordType != null) SizedBox(height: 20),
-              if (selectedRecordType != null)
-                ...filteredRecords.map((record) {
-                  return ListTile(
-                    title: Text(record['Rec_Item'] ?? 'Unknown Item'),
-                    subtitle:
-                        Text('Record Type: ${record['Rec_Type'] ?? 'N/A'}'),
-                    // Add other details as needed
+                          );
+                        },
+                        trailing: Icon(Icons.arrow_forward_ios,
+                            color: Colors.white, size: 30), // Add trailing
+                        amount:
+                            '${widget.records.where((record) => record['Rec_Type'] == type).length} Items',
+                      ),
+                      SizedBox(height: 16), // Space between tiles
+                    ],
                   );
                 }).toList(),
-            ],
-          ),
-        ));
+
+                // Display filtered records
+                if (selectedRecordType != null) SizedBox(height: 20),
+                if (selectedRecordType != null)
+                  ...filteredRecords.map((record) {
+                    return ListTile(
+                      title: Text(record['Rec_Item'] ?? 'Unknown Item'),
+                      subtitle:
+                          Text('Record Type: ${record['Rec_Type'] ?? 'N/A'}'),
+                      // Add other details as needed
+                    );
+                  }).toList(),
+              ],
+            ),
+          ));
+    });
   }
 }
 

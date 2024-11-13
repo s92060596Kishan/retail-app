@@ -4,9 +4,12 @@ import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/selected_products_screen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class ScanProductScreen extends StatefulWidget {
   @override
@@ -26,7 +29,7 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
 // Declare TextEditingControllers
   final TextEditingController rawStockController = TextEditingController();
   final TextEditingController caseStockController = TextEditingController();
-
+  final TextEditingController barcodeController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -82,6 +85,16 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
         fetchProductDetails(scannedBarcode);
       }
     });
+  }
+
+  Future<void> searchProduct() async {
+    final barcode = barcodeController.text.trim();
+    if (barcode.isNotEmpty) {
+      await fetchProductDetails(barcode);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Please enter a barcode.")));
+    }
   }
 
   void selectProduct() async {
@@ -171,97 +184,146 @@ class _ScanProductScreenState extends State<ScanProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true, // Add this line
-      appBar: AppBar(
-        backgroundColor: Colors.teal,
-        title: Text(
-          "Scan Product",
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        centerTitle: true,
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.shopping_cart),
-                tooltip: 'Selected Products',
-                onPressed: showSelectedProducts,
-              ),
-              if (selectedProducts.isNotEmpty)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: CircleAvatar(
-                    radius: 10,
-                    backgroundColor: Colors.red,
-                    child: Text(
-                      selectedProducts.length.toString(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        resizeToAvoidBottomInset: true, // Add this line
+        appBar: AppBar(
+          backgroundColor: Colors.teal,
+          title: Text(
+            "Scan Product",
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          centerTitle: true,
+          actions: [
+            Stack(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.shopping_cart),
+                  tooltip: 'Selected Products',
+                  onPressed: showSelectedProducts,
+                ),
+                if (selectedProducts.isNotEmpty)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: CircleAvatar(
+                      radius: 10,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        selectedProducts.length.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refresh, // Call refresh method on pull-to-refresh
-        child: Container(
-          // Use Container for the entire body
-          height: MediaQuery.of(context).size.height, // Full height
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF001a1a),
-                Color(0xFF005959),
-                Color(0xFF0fbf7f),
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
-          ),
-          child: SingleChildScrollView(
-            // Wrap with SingleChildScrollView for scrolling
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon:
-                      Icon(Icons.barcode_reader, size: 70, color: Colors.white),
-                  onPressed: scanBarcode,
-                  tooltip: "Scan Barcode",
-                ),
-                SizedBox(height: 20),
-                InkWell(
-                  onTap: scanBarcode,
-                  child: Text(
-                    "Click to Scan Product",
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _refresh, // Call refresh method on pull-to-refresh
+          child: Container(
+            // Use Container for the entire body
+            height: MediaQuery.of(context).size.height, // Full height
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF001a1a),
+                  Color(0xFF005959),
+                  Color(0xFF0fbf7f),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: SingleChildScrollView(
+              // Wrap with SingleChildScrollView for scrolling
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.barcode_reader,
+                        size: 70, color: Colors.white),
+                    onPressed: scanBarcode,
+                    tooltip: "Scan Barcode",
+                  ),
+                  SizedBox(height: 20),
+                  InkWell(
+                    onTap: scanBarcode,
+                    child: Text(
+                      "Click to Scan Product",
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(height: 30),
-                if (isLoading)
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  )
-                else
-                  buildProductDetails(),
-              ],
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white,
+                          thickness: 1,
+                          indent: 20,
+                          endIndent: 10,
+                        ),
+                      ),
+                      Text(
+                        'or',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white,
+                          thickness: 1,
+                          indent: 10,
+                          endIndent: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 30),
+                  TextField(
+                    controller: barcodeController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter barcode manually',
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.search, color: Colors.black),
+                        onPressed: searchProduct,
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  SizedBox(height: 30),
+                  if (isLoading)
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    )
+                  else
+                    buildProductDetails(),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget buildProductDetails() {

@@ -3,11 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/models/user_model.dart';
 import 'package:skilltest/screens/settingScreen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({Key? key}) : super(key: key);
@@ -128,108 +131,119 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Profile Screen',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.teal,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Profile Screen',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: AssetImage("assets/images/guest.jpg"),
-                backgroundColor: Colors.white,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.teal, width: 2),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: AssetImage("assets/images/guest.jpg"),
+                  backgroundColor: Colors.white,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.teal, width: 2),
+                    ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 20),
-            Center(
-              child: Text(
-                '${user1?.userName ?? 'Guest'}',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              SizedBox(height: 20),
+              Center(
+                child: Text(
+                  '${user1?.userName ?? 'Guest'}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 10),
-            Center(
-              child: Text(
-                'Email: ${user1?.email ?? 'N/A'}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[200],
+              SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Email: ${user1?.email ?? 'N/A'}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[200],
+                  ),
                 ),
               ),
-            ),
-            Center(
-              child: Text(
-                'Phone Number: ${user1?.phoneNumber ?? 'N/A'}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[300],
+              Center(
+                child: Text(
+                  'Phone Number: ${user1?.phoneNumber ?? 'N/A'}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[300],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 40),
-            Expanded(
-              child: ListView(
-                children: [
-                  // _buildMenuItem(Icons.receipt_long, 'All Transactions', () {
-                  //   Navigator.push(
-                  //     context,
-                  //     MaterialPageRoute(
-                  //       builder: (context) => QuickTransactionListPage(),
-                  //     ),
-                  //   );
-                  // }),
-                  // _buildMenuItem(Icons.point_of_sale_sharp, 'Active Sales', () {
-                  //   Navigator.push(
-                  //     context,
-                  //     MaterialPageRoute(
-                  //       builder: (context) => TransactionListPage(),
-                  //     ),
-                  //   );
-                  // }),
-                  _buildMenuItem(Icons.settings, 'Profile Settings', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfileManagementScreen(),
-                      ),
-                    );
-                  }),
-                  _buildMenuItem(Icons.logout, 'Logout', () {
-                    _logout(context);
-                  }),
-                ],
+              SizedBox(height: 40),
+              Expanded(
+                child: ListView(
+                  children: [
+                    // _buildMenuItem(Icons.receipt_long, 'All Transactions', () {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => QuickTransactionListPage(),
+                    //     ),
+                    //   );
+                    // }),
+                    // _buildMenuItem(Icons.point_of_sale_sharp, 'Active Sales', () {
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => TransactionListPage(),
+                    //     ),
+                    //   );
+                    // }),
+                    _buildMenuItem(Icons.settings, 'Profile Settings', () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileManagementScreen(),
+                        ),
+                      );
+                    }),
+                    _buildMenuItem(Icons.logout, 'Logout', () {
+                      _logout(context);
+                    }),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {

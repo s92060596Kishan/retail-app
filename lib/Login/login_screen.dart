@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/constants.dart';
 import 'package:skilltest/responsive.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 import '../../components/background.dart';
 import 'components/login_form.dart';
@@ -12,33 +15,44 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Background(
-      child: SingleChildScrollView(
-        child: Responsive(
-          mobile: MobileLoginScreen(),
-          desktop: Row(
-            children: [
-              Expanded(
-                child: LoginScreenTopImage(),
-              ),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 450,
-                      child: LoginForm(),
-                    ),
-                    SizedBox(height: defaultPadding / 2),
-                    AppVersionDisplay(),
-                  ],
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return const Background(
+        child: SingleChildScrollView(
+          child: Responsive(
+            mobile: MobileLoginScreen(),
+            desktop: Row(
+              children: [
+                Expanded(
+                  child: LoginScreenTopImage(),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 450,
+                        child: LoginForm(),
+                      ),
+                      SizedBox(height: defaultPadding / 2),
+                      AppVersionDisplay(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

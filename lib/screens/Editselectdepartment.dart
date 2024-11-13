@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/selectItemeditscreen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class DepartmentsEditScreen extends StatefulWidget {
   final String filterValue;
@@ -25,7 +28,7 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
   String? selectedUserId;
   String? selectedTile; // State to keep track of the selected tile
   List<Map<String, dynamic>> dataList = [];
-  bool isLoading = false;
+  bool isLoading = true;
   String errorMessage = '';
   List<String> dateRanges = [];
   Map<String, String> dateRangeToUserId = {};
@@ -33,11 +36,19 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
   bool isSearchExpanded = true; // New state to control expansion
   Map<String, List<Map<String, dynamic>>> departmentItemsMap = {};
   List<Map<String, dynamic>> departmentsList = [];
+  List<Map<String, dynamic>> filteredDepartments = []; // Class-level variable
   double totalSalesAmount = 0.0;
   int totalSalesCount = 0;
+  int totalDepartments = 0;
   @override
   void initState() {
     super.initState();
+    // Delay for 10 seconds before updating isLoading to false
+    Future.delayed(Duration(seconds: 5), () {
+      setState(() {
+        isLoading = false;
+      });
+    });
     fetchTransactions(widget.filterValue);
   }
 
@@ -67,9 +78,9 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
         await _fetchTransactionsForUser(custId, userId);
       }
 
-      setState(() {
-        isLoading = false; // Hide loading indicator once data is fetched
-      });
+      // setState(() {
+      //   isLoading = false; // Hide loading indicator once data is fetched
+      // });
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -79,6 +90,9 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
   }
 
   Future<void> _fetchTransactionsForUser(String custId, String userId) async {
+    setState(() {
+      isLoading = true;
+    });
     try {
       final response = await http.get(
         Uri.parse(baseURL + 'getactivesales/$custId/$userId'),
@@ -195,7 +209,7 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
             totalSalesAmount += double.tryParse(item['amount'].toString()) ?? 0;
             totalSalesCount += 1;
           }
-          isLoading = false;
+          fetchAndCalculateData();
         });
       } else {
         throw Exception('Failed to load data');
@@ -205,9 +219,44 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
       setState(() {
         errorMessage = 'Error fetching data: $e';
       });
+    }
+  }
+
+// Start loading before fetching data
+  void fetchAndCalculateData() async {
+    try {
+      setState(() {
+        isLoading = true;
+        // Filter departmentsList
+        filteredDepartments = departmentsList.where((department) {
+          final String departmentId = department['departments_id'].toString();
+          return departmentItemsMap.containsKey(departmentId) &&
+              departmentItemsMap[departmentId]!.isNotEmpty;
+        }).toList();
+
+        // Debug statement to check filtered count
+        print('Filtered Departments Count: ${filteredDepartments.length}');
+
+        totalDepartments = filteredDepartments.length;
+        totalSalesAmount = filteredDepartments.fold(0.0, (sum, department) {
+          final String departmentId = department['departments_id'].toString();
+          final List<Map<String, dynamic>> items =
+              departmentItemsMap[departmentId] ?? [];
+          return sum +
+              items.fold(0.0, (deptSum, item) {
+                return deptSum +
+                    (double.tryParse(item['amount'].toString()) ?? 0);
+              });
+        });
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error: $e';
+        isLoading = false;
+      });
     } finally {
       setState(() {
-        // Hide loading indicator after data is fetched
+        isLoading = false;
       });
     }
   }
@@ -240,27 +289,6 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
   Widget _buildDepartmentsView() {
     String? currencySymbol =
         CurrencyService().currencySymbol; // Get the currency symbol
-    double totalSalesAmount = 0.0; // Initialize total sales amount
-
-    // Filter departmentsList to only include departments with related items
-    final filteredDepartments = departmentsList.where((department) {
-      final String departmentId = department['departments_id'].toString();
-      return departmentItemsMap.containsKey(departmentId) &&
-          departmentItemsMap[departmentId]!.isNotEmpty;
-    }).toList();
-
-    // Calculate total departments and total sales
-    int totalDepartments = filteredDepartments.length;
-    totalSalesAmount = filteredDepartments.fold(0.0, (sum, department) {
-      final String departmentId = department['departments_id'].toString();
-      final List<Map<String, dynamic>> items =
-          departmentItemsMap[departmentId] ?? [];
-      return sum +
-          items.fold(
-              0.0,
-              (deptSum, item) =>
-                  deptSum + (double.tryParse(item['amount'].toString()) ?? 0));
-    });
 
     return isLoading
         ? Center(
@@ -304,7 +332,7 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '$totalDepartments',
+                                  '${filteredDepartments.length}',
                                   style: TextStyle(
                                     fontSize: 24, // Font size for the number
                                     fontWeight: FontWeight.bold,
@@ -344,16 +372,17 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
               ),
               Expanded(
                 child: filteredDepartments.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No departments with transactions found.',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
+                    ? (isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(),
+                          )
+                        : Center(
+                            child: Text(
+                                "No Departments,Transactions are  Available",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ))
                     : GridView.builder(
                         padding: EdgeInsets.all(8),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -435,25 +464,36 @@ class _DepartmentsEditScreenState extends State<DepartmentsEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Departments',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.teal,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Departments',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
-        child: _buildDepartmentsView(), // Your GridView or body content
-      ),
-    );
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: _buildDepartmentsView(), // Your GridView or body content
+        ),
+      );
+    });
   }
 }

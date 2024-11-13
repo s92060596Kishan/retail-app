@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class DepartmentDetailslivesalesPage extends StatefulWidget {
   @override
@@ -201,165 +204,179 @@ class _DepartmentDetailslivesalesPageState
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
     int totalDepartments = departmentItemsMap.keys.length;
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Department Details',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.teal,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Department Details',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
-        padding: const EdgeInsets.all(16.0),
-        child: isLoading
-            ? Center(child: CircularProgressIndicator())
-            : errorMessage.isNotEmpty
-                ? Center(
-                    child:
-                        Text(errorMessage, style: TextStyle(color: Colors.red)),
-                  )
-                : Column(
-                    children: [
-                      Expanded(
-                        child: ListView(
-                          children: departmentsList.where((department) {
-                            final String departmentId =
-                                department['departments_id'].toString();
-                            final List<Map<String, dynamic>> items =
-                                departmentItemsMap[departmentId] ?? [];
-                            return items.isNotEmpty;
-                          }).map((department) {
-                            final String departmentId =
-                                department['departments_id'].toString();
-                            final String departmentName = department['name'];
-                            final List<Map<String, dynamic>> items =
-                                departmentItemsMap[departmentId] ?? [];
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: isLoading
+              ? Center(child: CircularProgressIndicator())
+              : errorMessage.isNotEmpty
+                  ? Center(
+                      child: Text(errorMessage,
+                          style: TextStyle(color: Colors.white)),
+                    )
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: ListView(
+                            children: departmentsList.where((department) {
+                              final String departmentId =
+                                  department['departments_id'].toString();
+                              final List<Map<String, dynamic>> items =
+                                  departmentItemsMap[departmentId] ?? [];
+                              return items.isNotEmpty;
+                            }).map((department) {
+                              final String departmentId =
+                                  department['departments_id'].toString();
+                              final String departmentName = department['name'];
+                              final List<Map<String, dynamic>> items =
+                                  departmentItemsMap[departmentId] ?? [];
 
-                            // Calculate total sales and count for each department
-                            double departmentTotalAmount =
-                                items.fold(0.0, (sum, item) {
-                              return sum +
-                                  (double.tryParse(item['amount'].toString()) ??
-                                      0);
-                            });
-                            int departmentSalesCount = items.length;
+                              // Calculate total sales and count for each department
+                              double departmentTotalAmount =
+                                  items.fold(0.0, (sum, item) {
+                                return sum +
+                                    (double.tryParse(
+                                            item['amount'].toString()) ??
+                                        0);
+                              });
+                              int departmentSalesCount = items.length;
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  departmentName,
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    departmentName,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'Sales Count: $departmentSalesCount',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Sales Count: $departmentSalesCount',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  'Total Sales: $currencySymbol ${departmentTotalAmount.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
+                                  Text(
+                                    'Total Sales: $currencySymbol ${departmentTotalAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                Divider(
-                                  color: Colors.white70,
-                                  thickness: 1,
-                                ),
-                              ],
-                            );
-                          }).toList(),
+                                  Divider(
+                                    color: Colors.white70,
+                                    thickness: 1,
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                         ),
-                      ),
-                      Container(
-                        width: double.infinity, // Full width
-                        padding: EdgeInsets.symmetric(
-                            vertical: 8.0, horizontal: 16.0), // Padding
-                        decoration: BoxDecoration(
-                          color: Colors.teal, // Background color
-                          borderRadius:
-                              BorderRadius.circular(10), // Rounded corners
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // First row with the department icon, label, and value
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Icon(
-                                  Icons.store,
-                                  size: 30, // Icon size
-                                  color: Colors.white,
-                                ),
-                                SizedBox(
-                                    width: 10), // Spacing between icon and text
-                                Text(
-                                  'Total Departments',
-                                  style: TextStyle(
-                                    fontSize: 16, // Font size
+                        Container(
+                          width: double.infinity, // Full width
+                          padding: EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 16.0), // Padding
+                          decoration: BoxDecoration(
+                            color: Colors.teal, // Background color
+                            borderRadius:
+                                BorderRadius.circular(10), // Rounded corners
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // First row with the department icon, label, and value
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Icon(
+                                    Icons.store,
+                                    size: 30, // Icon size
                                     color: Colors.white,
                                   ),
-                                ),
-                                Spacer(), // Pushes the value to the right
-                                Text(
-                                  '$totalDepartments',
-                                  style: TextStyle(
-                                    fontSize: 24, // Larger font for the value
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                  SizedBox(
+                                      width:
+                                          10), // Spacing between icon and text
+                                  Text(
+                                    'Total Departments',
+                                    style: TextStyle(
+                                      fontSize: 16, // Font size
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10), // Spacing between rows
-                            // Second row with the total sales label and value
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Total Sales Amount',
-                                  style: TextStyle(
-                                    fontSize: 16, // Font size
-                                    color: Colors.white,
+                                  Spacer(), // Pushes the value to the right
+                                  Text(
+                                    '$totalDepartments',
+                                    style: TextStyle(
+                                      fontSize: 24, // Larger font for the value
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                Spacer(), // Pushes the value to the right
-                                Text(
-                                  '$currencySymbol ${totalSalesAmount.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 24, // Larger font for the value
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                ],
+                              ),
+                              SizedBox(height: 10), // Spacing between rows
+                              // Second row with the total sales label and value
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Sales Amount',
+                                    style: TextStyle(
+                                      fontSize: 16, // Font size
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-      ),
-    );
+                                  Spacer(), // Pushes the value to the right
+                                  Text(
+                                    '$currencySymbol ${totalSalesAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 24, // Larger font for the value
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+        ),
+      );
+    });
   }
 }

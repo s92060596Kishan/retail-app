@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/TransacationTypewise.dart';
 import 'package:skilltest/screens/depPaymentType.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class CategoriesTypePage extends StatelessWidget {
   final String transactionType;
@@ -14,72 +17,93 @@ class CategoriesTypePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // flexibleSpace: Container(
-        //   decoration: BoxDecoration(
-        //     gradient: LinearGradient(
-        //       colors: [Colors.teal, Colors.blueAccent],
-        //       begin: Alignment.topLeft,
-        //       end: Alignment.bottomRight,
-        //     ),
-        //   ),
-        // ),
-        backgroundColor: Colors.teal,
-        title: Text(
-          'Categories',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          // flexibleSpace: Container(
+          //   decoration: BoxDecoration(
+          //     gradient: LinearGradient(
+          //       colors: [Colors.teal, Colors.blueAccent],
+          //       begin: Alignment.topLeft,
+          //       end: Alignment.bottomRight,
+          //     ),
+          //   ),
+          // ),
+          backgroundColor: Colors.teal,
+          title: Text(
+            'Categories',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          centerTitle: true,
         ),
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            CategoryTile(
-              title: 'Departments',
-              icon: Icons.business,
-              color: Colors.blueAccent,
-              trailing: IconButton(
-                icon: Icon(Icons.arrow_forward_ios, color: Colors.black),
-                onPressed: () async {
-                  // Save selected shop cust_id to secure storage
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF001a1a), Color(0xFF005959), Color(0xFF0fbf7f)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: ListView(
+            children: [
+              CategoryTile(
+                title: 'Departments',
+                icon: Icons.business,
+                color: Colors.blueAccent,
+                trailing: IconButton(
+                  icon: Icon(Icons.arrow_forward_ios, color: Colors.black),
+                  onPressed: () async {
+                    // Save selected shop cust_id to secure storage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => DepartmentDetailsPayTypePage(
+                              transactions: transactions)),
+                    );
+                  },
+                ),
+                onTap: () {
+                  // Navigate to Departments page
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (context) => DepartmentDetailsPayTypePage(
-                            transactions: transactions)),
+                              transactions: transactions,
+                            )),
                   );
                 },
               ),
-              onTap: () {
-                // Navigate to Departments page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => DepartmentDetailsPayTypePage(
-                            transactions: transactions,
-                          )),
-                );
-              },
-            ),
-            SizedBox(height: 16), // Space between tiles
-            CategoryTile(
-              title: 'All Transactions',
-              icon: Icons.account_balance_wallet,
-              color: Color.fromARGB(255, 7, 111, 176),
-              trailing: IconButton(
-                icon: Icon(Icons.arrow_forward_ios, color: Colors.black),
-                onPressed: () async {
-                  // Save selected shop cust_id to secure storage
+              SizedBox(height: 16), // Space between tiles
+              CategoryTile(
+                title: 'All Transactions',
+                icon: Icons.account_balance_wallet,
+                color: Color.fromARGB(255, 7, 111, 176),
+                trailing: IconButton(
+                  icon: Icon(Icons.arrow_forward_ios, color: Colors.black),
+                  onPressed: () async {
+                    // Save selected shop cust_id to secure storage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => TransactionTypewisePage(
+                                transactionType: transactionType,
+                                transactions: transactions,
+                              )),
+                    );
+                  },
+                ),
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -90,21 +114,11 @@ class CategoriesTypePage extends StatelessWidget {
                   );
                 },
               ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => TransactionTypewisePage(
-                            transactionType: transactionType,
-                            transactions: transactions,
-                          )),
-                );
-              },
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

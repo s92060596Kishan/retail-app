@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:skilltest/Login/login_screen.dart';
 import 'package:skilltest/constants.dart';
 import 'package:skilltest/services/baseurl.dart';
-
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await fetchApiKey(); // Ensure API key is fetched before running the app
   //await CurrencyService().fetchCurrencyValue();
-  runApp(const MyApp());
+ runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

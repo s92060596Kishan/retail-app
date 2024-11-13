@@ -5,10 +5,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/filterdataTransactio.dart';
 import 'package:skilltest/screens/posrecordstiles.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class ReportHomeScreen extends StatefulWidget {
   final String filterValue;
@@ -292,142 +295,153 @@ class _ReportHomeScreenState extends State<ReportHomeScreen> {
       ...orderedTransactionTypes,
       ...otherTransactionTypes
     ];
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
 
-    return Scaffold(
-      appBar: AppBar(
-        // flexibleSpace: Container(
-        //   decoration: BoxDecoration(
-        //     gradient: LinearGradient(
-        //       colors: [Colors.teal, Colors.blueAccent],
-        //       begin: Alignment.topLeft,
-        //       end: Alignment.bottomRight,
-        //     ),
-        //   ),
-        // ),
-        backgroundColor: Color.fromARGB(255, 0, 173, 156),
-        title: Text(
-          'Reports Menu',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+      return Scaffold(
+        appBar: AppBar(
+          // flexibleSpace: Container(
+          //   decoration: BoxDecoration(
+          //     gradient: LinearGradient(
+          //       colors: [Colors.teal, Colors.blueAccent],
+          //       begin: Alignment.topLeft,
+          //       end: Alignment.bottomRight,
+          //     ),
+          //   ),
+          // ),
+          backgroundColor: Color.fromARGB(255, 0, 173, 156),
+          title: Text(
+            'Reports Menu',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
         ),
-      ),
-      body: isLoading
-          ? Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF001a1a),
-                    Color(0xFF005959),
-                    Color(0xFF0fbf7f)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        body: isLoading
+            ? Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF001a1a),
+                      Color(0xFF005959),
+                      Color(0xFF0fbf7f)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-              ),
-              child: Center(child: CircularProgressIndicator()))
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF001a1a),
-                    Color(0xFF005959),
-                    Color(0xFF0fbf7f)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                child: Center(child: CircularProgressIndicator()))
+            : Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF001a1a),
+                      Color(0xFF005959),
+                      Color(0xFF0fbf7f)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-              ),
-              child: RefreshIndicator(
-                onRefresh: refreshData,
-                child: ListView(
-                  children: [
-                    // Show total sales
-                    AnimatedTileCard(
-                      title: 'Total Sales',
-                      icon: Icons.receipt,
-                      count: '${dataList.length} Sales',
-                      amount:
-                          '\ $currencySymbol ${totalSalesAmount.toStringAsFixed(2)}',
-                      trailing: Icon(Icons.arrow_forward_ios,
-                          color: Colors.white, size: 30), // Add trailing icon
-                      //color: Color(0xFF17876D),
-                      color: Color(0xFF26A69A),
-                      // gradient: LinearGradient(
-                      //   colors: [
-                      //     Color(0xFF1D976C),
-                      //     Color(
-                      //         0xFF93F9B9), // Blue color// Repeated blue color for a single color gradient
-                      //   ],
-                      //   begin: Alignment.topLeft,
-                      //   end: Alignment.bottomRight,
-                      // ),
-
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => FilterDetailsPage(
-                                  filterValue: widget.filterValue,
-                                  dateRangeToUserId: widget.dateRangeToUserId)),
-                        );
-                      },
-                    ),
-                    AnimatedTileCard(
-                      title: 'Exceptions',
-                      icon: Icons.info_outline,
-                      //color: Color(0xFF095544),
-                      color: Color(0xFF4DB6AC),
-                      onTap: () {
-                        // showDetailModel(context, 'profit');
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                PosrecordsPage(records: dataList1),
-                          ),
-                        );
-                      },
-                      count:
-                          '${dataList1.length} ', // Show profit as the sum of total_payable
-                      trailing: Icon(Icons.arrow_forward_ios,
-                          color: Colors.white, size: 30), // Add trailing icon
-                    ),
-                    // Show transactions by type
-                    ...transactionDisplayOrder
-                        .where((type) =>
-                            (transactionTypeTotals[type] ?? 0) > 0 ||
-                            (transactionTypeCounts[type] ?? 0) > 0)
-                        .map((type) {
-                      double totalAmount = transactionTypeTotals[type] ??
-                          0; // Get total payable for the type
-                      int transactionCount = transactionTypeCounts[type] ??
-                          0; // Get count of transactions for the type
-                      return AnimatedTileCard(
-                        title: '$type Transactions',
-                        icon: Icons.monetization_on,
-                        count: '${transactionCount ?? 0}',
+                child: RefreshIndicator(
+                  onRefresh: refreshData,
+                  child: ListView(
+                    children: [
+                      // Show total sales
+                      AnimatedTileCard(
+                        title: 'Total Sales',
+                        icon: Icons.receipt,
+                        count: '${dataList.length} Sales',
                         amount:
-                            '\ $currencySymbol ${totalAmount.toStringAsFixed(2)}',
-                        //color: Color(0xFF08453A),
-                        color: Color(0xFF80CBC4),
+                            '\ $currencySymbol ${totalSalesAmount.toStringAsFixed(2)}',
+                        trailing: Icon(Icons.arrow_forward_ios,
+                            color: Colors.white, size: 30), // Add trailing icon
+                        //color: Color(0xFF17876D),
+                        color: Color(0xFF26A69A),
                         // gradient: LinearGradient(
                         //   colors: [
-                        //     // Color(0xFF3c1053), // Light lavender color
-                        //     // Color(0xFFad5389), // Light sky blue color
-                        //     Color(0xFF11998e),
-                        //     Color(0xFF38ef7d),
+                        //     Color(0xFF1D976C),
+                        //     Color(
+                        //         0xFF93F9B9), // Blue color// Repeated blue color for a single color gradient
                         //   ],
                         //   begin: Alignment.topLeft,
                         //   end: Alignment.bottomRight,
                         // ),
-                        onTap: () {},
-                      );
-                    }).toList(),
-                  ],
+
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => FilterDetailsPage(
+                                    filterValue: widget.filterValue,
+                                    dateRangeToUserId:
+                                        widget.dateRangeToUserId)),
+                          );
+                        },
+                      ),
+                      AnimatedTileCard(
+                        title: 'Exceptions',
+                        icon: Icons.info_outline,
+                        //color: Color(0xFF095544),
+                        color: Color(0xFF4DB6AC),
+                        onTap: () {
+                          // showDetailModel(context, 'profit');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PosrecordsPage(records: dataList1),
+                            ),
+                          );
+                        },
+                        count:
+                            '${dataList1.length} ', // Show profit as the sum of total_payable
+                        trailing: Icon(Icons.arrow_forward_ios,
+                            color: Colors.white, size: 30), // Add trailing icon
+                      ),
+                      // Show transactions by type
+                      ...transactionDisplayOrder
+                          .where((type) =>
+                              (transactionTypeTotals[type] ?? 0) > 0 ||
+                              (transactionTypeCounts[type] ?? 0) > 0)
+                          .map((type) {
+                        double totalAmount = transactionTypeTotals[type] ??
+                            0; // Get total payable for the type
+                        int transactionCount = transactionTypeCounts[type] ??
+                            0; // Get count of transactions for the type
+                        return AnimatedTileCard(
+                          title: '$type Transactions',
+                          icon: Icons.monetization_on,
+                          count: '${transactionCount ?? 0}',
+                          amount:
+                              '\ $currencySymbol ${totalAmount.toStringAsFixed(2)}',
+                          //color: Color(0xFF08453A),
+                          color: Color(0xFF80CBC4),
+                          // gradient: LinearGradient(
+                          //   colors: [
+                          //     // Color(0xFF3c1053), // Light lavender color
+                          //     // Color(0xFFad5389), // Light sky blue color
+                          //     Color(0xFF11998e),
+                          //     Color(0xFF38ef7d),
+                          //   ],
+                          //   begin: Alignment.topLeft,
+                          //   end: Alignment.bottomRight,
+                          // ),
+                          onTap: () {},
+                        );
+                      }).toList(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-    );
+      );
+    });
   }
 }
 

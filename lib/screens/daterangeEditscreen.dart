@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/Editselectdepartment.dart';
 import 'package:skilltest/screens/selectItemeditscreen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class DateRangeLogEditScreen extends StatefulWidget {
   const DateRangeLogEditScreen({Key? key}) : super(key: key);
@@ -37,41 +40,54 @@ class _DateRangeLogScreenState extends State<DateRangeLogEditScreen> {
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Edit Sales',
-            style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Edit Sales',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+            backgroundColor: Colors.teal,
           ),
-          backgroundColor: Colors.teal,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Collapsible Search and Dropdown Section
-              _buildSearchAndFilterSection(),
-              // SizedBox(height: 10),
-              // Expanded(
-              //   child: Container(
-              //     decoration: BoxDecoration(
-              //       gradient: LinearGradient(
-              //         colors: [
-              //           Color(0xFF001a1a),
-              //           Color(0xFF005959),
-              //           Color(0xFF0fbf7f)
-              //         ],
-              //         begin: Alignment.topLeft,
-              //         end: Alignment.bottomRight,
-              //       ),
-              //     ),
-              //     child: _buildDepartmentsView(),
-              //   ),
-              // ),
-            ],
-          ),
-        ));
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Collapsible Search and Dropdown Section
+                _buildSearchAndFilterSection(),
+                // SizedBox(height: 10),
+                // Expanded(
+                //   child: Container(
+                //     decoration: BoxDecoration(
+                //       gradient: LinearGradient(
+                //         colors: [
+                //           Color(0xFF001a1a),
+                //           Color(0xFF005959),
+                //           Color(0xFF0fbf7f)
+                //         ],
+                //         begin: Alignment.topLeft,
+                //         end: Alignment.bottomRight,
+                //       ),
+                //     ),
+                //     child: _buildDepartmentsView(),
+                //   ),
+                // ),
+              ],
+            ),
+          ));
+    });
   }
 
   Widget _buildSearchAndFilterSection() {

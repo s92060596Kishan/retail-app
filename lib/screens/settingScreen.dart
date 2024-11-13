@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:motion_toast/motion_toast.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   @override
@@ -102,71 +105,82 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.teal,
-        title: Text(
-          'Profile Management',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blueAccent, Colors.purpleAccent],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.teal,
+          title: Text(
+            'Profile Management',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          centerTitle: true,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _isLoading
-                    ? Center(
-                        child:
-                            CircularProgressIndicator()) // Show loader while fetching data
-                    : _buildProfileCard(), // Show profile card once data is fetched
-                SizedBox(height: 20),
-                Text(
-                  'Change Password',
-                  style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-                SizedBox(height: 10),
-                _buildPasswordField(
-                    'Current Password', _currentPasswordController),
-                SizedBox(height: 10),
-                _buildPasswordField('New Password', _newPasswordController),
-                SizedBox(height: 10),
-                _buildPasswordField(
-                    'Confirm New Password', _confirmPasswordController),
-                SizedBox(height: 30),
-                _buildSaveChangesButton(),
-                SizedBox(height: 30),
-                Center(
-                  child: Text(
-                    'Need to update your information? Please contact customer support.',
-                    textAlign: TextAlign.center,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.purpleAccent],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _isLoading
+                      ? Center(
+                          child:
+                              CircularProgressIndicator()) // Show loader while fetching data
+                      : _buildProfileCard(), // Show profile card once data is fetched
+                  SizedBox(height: 20),
+                  Text(
+                    'Change Password',
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontStyle: FontStyle.italic,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                  SizedBox(height: 10),
+                  _buildPasswordField(
+                      'Current Password', _currentPasswordController),
+                  SizedBox(height: 10),
+                  _buildPasswordField('New Password', _newPasswordController),
+                  SizedBox(height: 10),
+                  _buildPasswordField(
+                      'Confirm New Password', _confirmPasswordController),
+                  SizedBox(height: 30),
+                  _buildSaveChangesButton(),
+                  SizedBox(height: 30),
+                  Center(
+                    child: Text(
+                      'Need to update your information? Please contact customer support.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   // Widget to display the user info card

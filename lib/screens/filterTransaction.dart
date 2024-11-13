@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:skilltest/screens/reportHomescreen.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class DateRangeLogScreen extends StatefulWidget {
   const DateRangeLogScreen({Key? key}) : super(key: key);
@@ -28,286 +31,300 @@ class _DateRangeLogScreenState extends State<DateRangeLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Quick Reports',
-            style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Quick Reports',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+            backgroundColor: Colors.teal,
           ),
-          backgroundColor: Colors.teal,
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                SizedBox(height: 60),
-                TextFormField(
-                  controller: _startDateController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Start Date',
-                    hintText: 'Select Start Date',
-                    suffixIcon: Icon(Icons.calendar_today),
-                    floatingLabelBehavior: FloatingLabelBehavior
-                        .auto, // Makes the label float to the top
-                    labelStyle: TextStyle(
-                      color: Colors.teal, // Custom color for the label text
-                      fontWeight: FontWeight.bold,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(
-                        color: Colors
-                            .teal, // Border color when field is not focused
-                        width: 2.0,
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  SizedBox(height: 60),
+                  TextFormField(
+                    controller: _startDateController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Start Date',
+                      hintText: 'Select Start Date',
+                      suffixIcon: Icon(Icons.calendar_today),
+                      floatingLabelBehavior: FloatingLabelBehavior
+                          .auto, // Makes the label float to the top
+                      labelStyle: TextStyle(
+                        color: Colors.teal, // Custom color for the label text
+                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(
-                        color:
-                            Colors.blue, // Border color when field is focused
-                        width: 2.5,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(
+                          color: Colors
+                              .teal, // Border color when field is not focused
+                          width: 2.0,
+                        ),
                       ),
-                    ),
-                    filled: true,
-                    fillColor:
-                        Colors.grey.shade100, // Background color of the field
-                  ),
-                  onTap: () async {
-                    await _selectDate(context, isStartDate: true);
-                    if (startDate != null && endDate != null) {
-                      await fetchLogDetails();
-                    }
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _endDateController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'End Date',
-                    hintText: 'Select End Date',
-                    suffixIcon: Icon(Icons.calendar_today),
-                    floatingLabelBehavior: FloatingLabelBehavior.auto,
-                    labelStyle: TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(
-                        color: Colors.teal,
-                        width: 2.0,
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(
+                          color:
+                              Colors.blue, // Border color when field is focused
+                          width: 2.5,
+                        ),
                       ),
+                      filled: true,
+                      fillColor:
+                          Colors.grey.shade100, // Background color of the field
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                      borderSide: BorderSide(
-                        color: Colors.blue,
-                        width: 2.5,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                  ),
-                  onTap: () async {
-                    await _selectDate(context, isStartDate: false);
-                    if (startDate != null && endDate != null) {
-                      await fetchLogDetails();
-                    }
-                  },
-                ),
-                SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Select Date Range',
-                    labelStyle: TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 12.0, horizontal: 20.0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide(color: Colors.teal, width: 2.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide(color: Colors.teal, width: 2.0),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide:
-                          BorderSide(color: Colors.blueAccent, width: 2.0),
-                    ),
-                  ),
-                  isExpanded: true,
-                  hint: Text(
-                    'Select Date Range',
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  value: selectedUserId,
-                  items: isLoading
-                      ? [
-                          DropdownMenuItem(
-                            child: Row(
-                              children: [
-                                CircularProgressIndicator(),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Loading...',
-                                  style: TextStyle(color: Colors.black54),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ]
-                      : (dateRanges.isNotEmpty
-                          ? [
-                              DropdownMenuItem(
-                                value: 'All',
-                                child: Text(
-                                  'All',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              ...dateRanges.map((String dateRange) {
-                                return DropdownMenuItem<String>(
-                                  value: dateRange,
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        dateRange,
-                                        style: TextStyle(
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Divider(
-                                        // Add divider after each item
-                                        color: Colors.grey,
-                                        thickness: 1.0,
-                                        height: 10,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ]
-                          : [
-                              DropdownMenuItem(
-                                child: Text(
-                                  'No Data Available',
-                                  style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            ]),
-                  onChanged: (value) {
-                    setState(() {
-                      if (value != null && value != 'No Data Available') {
-                        selectedUserId = value;
+                    onTap: () async {
+                      await _selectDate(context, isStartDate: true);
+                      if (startDate != null && endDate != null) {
+                        await fetchLogDetails();
                       }
-                    });
-                  },
-                  icon: Icon(
-                    Icons.arrow_drop_down_circle,
-                    color: Colors.teal,
+                    },
                   ),
-                  dropdownColor: Colors.white,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: _endDateController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'End Date',
+                      hintText: 'Select End Date',
+                      suffixIcon: Icon(Icons.calendar_today),
+                      floatingLabelBehavior: FloatingLabelBehavior.auto,
+                      labelStyle: TextStyle(
+                        color: Colors.teal,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(
+                          color: Colors.teal,
+                          width: 2.0,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                        borderSide: BorderSide(
+                          color: Colors.blue,
+                          width: 2.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                    ),
+                    onTap: () async {
+                      await _selectDate(context, isStartDate: false);
+                      if (startDate != null && endDate != null) {
+                        await fetchLogDetails();
+                      }
+                    },
                   ),
-                  isDense: false,
-                ),
-                SizedBox(height: 20),
-                // Find button to navigate to FilterDetailsPage
-                SizedBox(
-                  width: 150,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (selectedUserId != null) {
-                        if (selectedUserId == 'All') {
-                          // Pass a special value to indicate all user IDs
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReportHomeScreen(
-                                  filterValue: 'All',
-                                  dateRangeToUserId: dateRangeToUserId),
+                  SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Select Date Range',
+                      labelStyle: TextStyle(
+                        color: Colors.teal,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: EdgeInsets.symmetric(
+                          vertical: 12.0, horizontal: 20.0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide(color: Colors.teal, width: 2.0),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide(color: Colors.teal, width: 2.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            BorderSide(color: Colors.blueAccent, width: 2.0),
+                      ),
+                    ),
+                    isExpanded: true,
+                    hint: Text(
+                      'Select Date Range',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    value: selectedUserId,
+                    items: isLoading
+                        ? [
+                            DropdownMenuItem(
+                              child: Row(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Loading...',
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        } else {
-                          final userId = dateRangeToUserId[selectedUserId];
-                          if (userId != null) {
+                          ]
+                        : (dateRanges.isNotEmpty
+                            ? [
+                                DropdownMenuItem(
+                                  value: 'All',
+                                  child: Text(
+                                    'All',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                ...dateRanges.map((String dateRange) {
+                                  return DropdownMenuItem<String>(
+                                    value: dateRange,
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          dateRange,
+                                          style: TextStyle(
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Divider(
+                                          // Add divider after each item
+                                          color: Colors.grey,
+                                          thickness: 1.0,
+                                          height: 10,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ]
+                            : [
+                                DropdownMenuItem(
+                                  child: Text(
+                                    'No Data Available',
+                                    style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              ]),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value != null && value != 'No Data Available') {
+                          selectedUserId = value;
+                        }
+                      });
+                    },
+                    icon: Icon(
+                      Icons.arrow_drop_down_circle,
+                      color: Colors.teal,
+                    ),
+                    dropdownColor: Colors.white,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    isDense: false,
+                  ),
+                  SizedBox(height: 20),
+                  // Find button to navigate to FilterDetailsPage
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (selectedUserId != null) {
+                          if (selectedUserId == 'All') {
+                            // Pass a special value to indicate all user IDs
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ReportHomeScreen(
-                                    filterValue: userId,
+                                    filterValue: 'All',
                                     dateRangeToUserId: dateRangeToUserId),
                               ),
                             );
+                          } else {
+                            final userId = dateRangeToUserId[selectedUserId];
+                            if (userId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReportHomeScreen(
+                                      filterValue: userId,
+                                      dateRangeToUserId: dateRangeToUserId),
+                                ),
+                              );
+                            }
                           }
+                        } else {
+                          setState(() {
+                            errorMessage = 'Please select a date range first.';
+                          });
                         }
-                      } else {
-                        setState(() {
-                          errorMessage = 'Please select a date range first.';
-                        });
-                      }
-                    },
-                    style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all<Color>(Colors.blue),
-                      padding: MaterialStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(vertical: 15)),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
+                      },
+                      style: ButtonStyle(
+                        backgroundColor:
+                            MaterialStateProperty.all<Color>(Colors.blue),
+                        padding: MaterialStateProperty.all<EdgeInsets>(
+                            EdgeInsets.symmetric(vertical: 15)),
+                        shape:
+                            MaterialStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                        ),
+                        textStyle: MaterialStateProperty.all<TextStyle>(
+                          TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                       ),
-                      textStyle: MaterialStateProperty.all<TextStyle>(
-                        TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
+                      child: Text('Find',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                    ),
+                  ),
+                  if (errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        errorMessage,
+                        style: TextStyle(color: Colors.red),
                       ),
                     ),
-                    child: Text('Find',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                  ),
-                ),
-                if (errorMessage.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      errorMessage,
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ));
+          ));
+    });
   }
 
   Future<void> _selectDate(BuildContext context,

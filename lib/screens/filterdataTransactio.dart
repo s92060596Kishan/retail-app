@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:skilltest/services/baseurl.dart';
+import 'package:skilltest/services/connectivity_service.dart';
 import 'package:skilltest/services/currencyget.dart';
+import 'package:skilltest/services/nointernet.dart';
 
 class FilterDetailsPage extends StatefulWidget {
   final String filterValue;
@@ -194,103 +197,116 @@ class _FilterDetailsPageState extends State<FilterDetailsPage> {
   @override
   Widget build(BuildContext context) {
     String? currencySymbol = CurrencyService().currencySymbol;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Filter Details',
-          style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.teal,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF001a1a),
-              Color(0xFF005959),
-              Color(0xFF0fbf7f),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Consumer<ConnectivityService>(
+        builder: (context, connectivityService, child) {
+      // Check if there is no internet connection
+      if (!connectivityService.isConnected) {
+        // Show the popup dialog
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showNoInternetDialog(context);
+        });
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Filter Details',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
+          backgroundColor: Colors.teal,
         ),
-        child: Column(
-          children: [
-            SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedIndex = 0; // Set index for Departments
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _selectedIndex == 0 ? Colors.blueAccent : Colors.grey,
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Departments',
-                      style: TextStyle(
-                        color:
-                            _selectedIndex == 0 ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedIndex = 1; // Set index for Transactions
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _selectedIndex == 1 ? Colors.blueAccent : Colors.grey,
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Transactions',
-                      style: TextStyle(
-                        color:
-                            _selectedIndex == 1 ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF001a1a),
+                Color(0xFF005959),
+                Color(0xFF0fbf7f),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            SizedBox(height: 10),
-            Expanded(
-              child: IndexedStack(
-                index: _selectedIndex, // Show the selected view
+          ),
+          child: Column(
+            children: [
+              SizedBox(height: 10),
+              Row(
                 children: [
-                  // Container for Departments
-                  _buildDepartmentsView(),
-                  // Container for Transactions
-                  _buildTransactionsView(currencySymbol),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndex = 0; // Set index for Departments
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedIndex == 0
+                            ? Colors.blueAccent
+                            : Colors.grey,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Departments',
+                        style: TextStyle(
+                          color:
+                              _selectedIndex == 0 ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndex = 1; // Set index for Transactions
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedIndex == 1
+                            ? Colors.blueAccent
+                            : Colors.grey,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Transactions',
+                        style: TextStyle(
+                          color:
+                              _selectedIndex == 1 ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
+              SizedBox(height: 10),
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex, // Show the selected view
+                  children: [
+                    // Container for Departments
+                    _buildDepartmentsView(),
+                    // Container for Transactions
+                    _buildTransactionsView(currencySymbol),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   // Adjusted function for building transactions view
